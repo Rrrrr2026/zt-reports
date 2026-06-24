@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-06-24 创业板复盘</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  :root { --red:#e23b41; --green:#1e8e3e; --bg:#10131a; --panel:#1a1f2b;
+          --card:#212a3a; --ink:#e8eaf0; --muted:#8b94a5; --line:#2d3748;
+          --cyb:#9b7bf0; --gold:#f7b955; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:22px 20px 60px; background:var(--bg); color:var(--ink);
+         font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+         max-width:1100px; margin-inline:auto; }
+  header { display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
+  h1 { font-size:21px; margin:0; }
+  h1 .cyb { color:var(--cyb); }
+  .sub { color:var(--muted); font-size:12px; }
+  .datenav { margin-left:auto; display:flex; gap:8px; align-items:center; }
+  .datenav button,.datenav select { background:var(--card); color:var(--ink);
+    border:1px solid var(--line); border-radius:8px; padding:6px 12px; font-size:14px; cursor:pointer; }
+  .datenav button:disabled { opacity:.35; cursor:default; }
+  h2 { font-size:16px; margin:26px 0 12px; border-left:4px solid var(--cyb); padding-left:9px; }
+  /* 择时横幅 */
+  .regime { border-radius:14px; padding:16px 20px; margin-top:14px;
+            display:flex; flex-wrap:wrap; align-items:center; gap:16px; }
+  .regime.占优 { background:linear-gradient(135deg,#3a1f2a,#2a1f3a); border:1px solid var(--red); }
+  .regime.降温 { background:linear-gradient(135deg,#16241c,#1a1f2b); border:1px solid var(--green); }
+  .regime.中性 { background:var(--panel); border:1px solid var(--line); }
+  .regime .tag { font-size:22px; font-weight:800; white-space:nowrap; }
+  .regime.占优 .tag { color:#ff7a85; } .regime.降温 .tag { color:#5fd08a; }
+  .regime .why { color:#c3cad6; font-size:13px; line-height:1.7; }
+  /* 情绪卡片 */
+  .cards { display:flex; flex-wrap:wrap; gap:10px; }
+  .scard { background:var(--card); border:1px solid var(--line); border-radius:10px;
+           padding:11px 16px; min-width:120px; }
+  .scard .k { font-size:11px; color:var(--muted); } .scard .v { font-size:21px; font-weight:700; }
+  .chart { background:var(--panel); border-radius:12px; margin-top:12px; }
+  /* 机会卡片 */
+  .pick { background:var(--card); border:1px solid var(--line); border-radius:14px;
+          padding:14px 16px; margin-bottom:12px; }
+  .pick.top { border-color:var(--gold); box-shadow:0 0 0 1px rgba(247,185,85,.25); }
+  .prow { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .rank { font-size:13px; color:var(--gold); font-weight:700; min-width:26px; }
+  .pcode { color:var(--muted); font-size:12px; font-family:Menlo,monospace; }
+  .pname { font-size:17px; font-weight:700; }
+  .scorebadge { background:var(--cyb); color:#fff; border-radius:6px; padding:1px 9px;
+                font-size:12px; font-weight:700; }
+  .scorebadge.neg { background:#566; }
+  .pprice { margin-left:auto; font-size:16px; font-weight:700; color:var(--red); }
+  .rets { display:flex; gap:6px; margin-top:9px; }
+  .ret { flex:1; background:var(--panel); border-radius:7px; padding:4px 0; text-align:center; }
+  .ret .k { font-size:10px; color:var(--muted); } .ret .v { font-size:12px; font-weight:600; }
+  .pos { color:var(--red); } .neg2 { color:var(--green); } .na { color:var(--muted); }
+  .nums { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  .num { background:var(--panel); border-radius:7px; padding:4px 9px; font-size:12px; }
+  .num b { font-weight:700; } .num .nk { color:var(--muted); font-size:10px; }
+  .judge { margin-top:9px; display:flex; flex-direction:column; gap:5px; }
+  .jline { font-size:12px; line-height:1.55; display:flex; gap:7px; }
+  .jline .plus { color:#ff9aa2; } .jline .minus { color:#7fd6a0; }
+  .empty { color:var(--muted); padding:20px; background:var(--panel); border-radius:12px; }
+  .hint { color:var(--muted); font-size:11px; margin-top:24px; line-height:1.8; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span class="cyb">创业板</span> 复盘 · 2026-06-24</h1>
+  <span class="sub">20cm 首板游戏 · 机会按规则打分排序</span>
+  <div class="datenav">
+    <button id="prev">‹</button><select id="sel"></select><button id="next">›</button>
+  </div>
+</header>
+
+<div id="regime"></div>
+
+<h2>创业板情绪面板</h2>
+<div class="cards" id="senti"></div>
+<div id="trend" class="chart" style="height:260px;"></div>
+
+<h2>20cm 首板机会清单 <span class="sub">(封单/题材共振/消息/封板质量/资金/位置 综合打分)</span></h2>
+<div id="picks"></div>
+
+<div class="hint">
+  · 评分仅按规则汇总盘面与消息线索,分数高=机会信号多、风险标记少,<b>不是买入建议</b>,更不构成投资建议。<br>
+  · 创业板是"首板游戏":晋级率仅约5%,赌连板基本必死;清单聚焦"首板当天/次日的一波流"逻辑。<br>
+  · 涨幅为前复权区间涨幅;PE(TTM)亏损显示"亏损";趋势图需联网加载 ECharts。
+</div>
+<script>
+const D = {"date": "2026-06-24", "regime": {"regime": "中性", "reason": "占比与溢价信号未一致/不足,保持中性(占比6%、溢价差(中位)+1.7pct)", "series": [{"date": "2026-06-10", "cyb_count": 2, "total": 71, "ratio": 0.028169014084507043, "cyb_prem": 0.11813349276781082, "main_prem": 0.3197953402996063, "cyb_n": 9, "spread": -0.2016618475317955}, {"date": "2026-06-11", "cyb_count": 8, "total": 69, "ratio": 0.11594202898550725, "cyb_prem": 4.162695407867432, "main_prem": -0.618683710694313, "cyb_n": 2, "spread": null}, {"date": "2026-06-12", "cyb_count": 5, "total": 88, "ratio": 0.056818181818181816, "cyb_prem": 1.837645173072815, "main_prem": 0.09282178431749344, "cyb_n": 8, "spread": 1.7448233887553215}, {"date": "2026-06-15", "cyb_count": 12, "total": 145, "ratio": 0.08275862068965517, "cyb_prem": 4.837155342102051, "main_prem": 2.0081686973571777, "cyb_n": 5, "spread": 2.828986644744873}, {"date": "2026-06-16", "cyb_count": 9, "total": 116, "ratio": 0.07758620689655173, "cyb_prem": 5.1165924072265625, "main_prem": 3.7073168754577637, "cyb_n": 12, "spread": 1.4092755317687988}, {"date": "2026-06-17", "cyb_count": 11, "total": 85, "ratio": 0.12941176470588237, "cyb_prem": -0.5732801556587219, "main_prem": 1.734104037284851, "cyb_n": 9, "spread": -2.307384192943573}, {"date": "2026-06-18", "cyb_count": 7, "total": 91, "ratio": 0.07692307692307693, "cyb_prem": -4.089346885681152, "main_prem": -1.5037593841552734, "cyb_n": 11, "spread": -2.585587501525879}, {"date": "2026-06-22", "cyb_count": 11, "total": 132, "ratio": 0.08333333333333333, "cyb_prem": 4.919785976409912, "main_prem": 3.160919666290283, "cyb_n": 7, "spread": 1.758866310119629}, {"date": "2026-06-23", "cyb_count": 7, "total": 94, "ratio": 0.07446808510638298, "cyb_prem": 4.450262069702148, "main_prem": 0.09099180996417999, "cyb_n": 11, "spread": 4.3592702597379684}, {"date": "2026-06-24", "cyb_count": 6, "total": 98, "ratio": 0.061224489795918366, "cyb_prem": 1.5057573318481445, "main_prem": -0.22976019233465195, "cyb_n": 7, "spread": 1.7355175241827965}], "today": {"date": "2026-06-24", "cyb_count": 6, "total": 98, "ratio": 0.061224489795918366, "cyb_prem": 1.5057573318481445, "main_prem": -0.22976019233465195, "cyb_n": 7, "spread": 1.7355175241827965}}, "senti": {"zt_count": 6, "first_board": 6, "max_lianban": 1, "zb_count": 0, "dt_count": 0, "zb_rate": 0.0, "ratio": 0.061224489795918366, "yest_avg_pct": 1.5303515706743513, "promo_rate": 0.0, "yest_n": 7}, "picks": [{"code": "301132", "name": "满坤科技", "price": 54.74, "theme": "机器人概念", "resonance": 3, "seal_amount": 130905236.0, "seal_to_float": 0.025243195344341558, "first_seal_time": "09:36", "open_times": 1, "turnover": 7.2671003341674805, "pe_ttm": 74.09, "ret_1w": 23.066546762589944, "ret_1m": 34.035259549461315, "ret_6m": 59.31315483119908, "main_net": 78475918.0, "news": "【中证快报】6月23日中证投资资讯 | 八部门联合发文推进汽车流通消费改革试点", "score": 6.5, "pros": ["封单占流通2.5%,铁板", "机器人概念创业板内3只共振,主线", "消息:【中证快报】6月23日中证投资资讯 | 八部门联", "主力净流入0.8亿(占成交22%)"], "cons": ["炸板1次后回封,有分歧"]}, {"code": "301669", "name": "高特电子", "price": 45.2, "theme": "储能概念", "resonance": 1, "seal_amount": 58421452.0, "seal_to_float": 0.015783963238853966, "first_seal_time": "10:30", "open_times": 2, "turnover": 45.09468078613281, "pe_ttm": 154.44, "ret_1w": 22.327469553450598, "ret_1m": null, "ret_6m": null, "main_net": 327158634.0, "news": "上半年业绩暴增创业板股名单", "score": 2.0, "pros": ["封单占流通1.6%,较扎实", "消息:上半年业绩暴增创业板股名单", "主力净流入3.3亿(占成交21%)"], "cons": ["储能概念仅此1只,题材辨识度弱", "炸板2次,20cm反复=天地板风险"]}, {"code": "301310", "name": "鑫宏业", "price": 53.86, "theme": "机器人概念", "resonance": 3, "seal_amount": 15858646.0, "seal_to_float": 0.0048280320844528235, "first_seal_time": "10:49", "open_times": 11, "turnover": 28.077720642089844, "pe_ttm": 76.07, "ret_1w": 38.244353182751546, "ret_1m": 88.78373641780581, "ret_6m": 70.66987768553142, "main_net": 59652201.0, "news": null, "score": 1.5, "pros": ["机器人概念创业板内3只共振,主线", "主力净流入0.6亿(占成交7%)"], "cons": ["无明确消息,纯情绪/资金驱动", "炸板11次,20cm反复=天地板风险"]}, {"code": "301366", "name": "一博科技", "price": 62.84, "theme": "机器人概念", "resonance": 3, "seal_amount": 7777078.0, "seal_to_float": 0.001057810687285414, "first_seal_time": "11:27", "open_times": 28, "turnover": 26.440744400024414, "pe_ttm": 277.18, "ret_1w": 7.972508591065286, "ret_1m": 34.38836612489309, "ret_6m": 77.11386696730555, "main_net": 115072561.0, "news": null, "score": 0.5, "pros": ["机器人概念创业板内3只共振,主线", "主力净流入1.2亿(占成交6%)"], "cons": ["封单仅占流通0.11%,偏薄", "无明确消息,纯情绪/资金驱动", "炸板28次,20cm反复=天地板风险"]}, {"code": "301396", "name": "宏景科技", "price": 297.6, "theme": "人工智能", "resonance": 2, "seal_amount": 70979980.0, "seal_to_float": 0.0016854854332217864, "first_seal_time": "10:41", "open_times": 5, "turnover": 13.49170970916748, "pe_ttm": 1824.66, "ret_1w": 38.026993182134404, "ret_1m": 45.241581259150806, "ret_6m": 571.9956645440998, "main_net": 568909888.0, "news": null, "score": -0.5, "pros": ["人工智能双响,题材成立", "主力净流入5.7亿(占成交11%)"], "cons": ["封单仅占流通0.17%,偏薄", "无明确消息,纯情绪/资金驱动", "炸板5次,20cm反复=天地板风险"]}, {"code": "300506", "name": "名家汇", "price": 5.68, "theme": "破增发价股", "resonance": 1, "seal_amount": 2076608.0, "seal_to_float": 0.0004976204371886002, "first_seal_time": "11:21", "open_times": 7, "turnover": 10.818674087524414, "pe_ttm": -126.99, "ret_1w": 16.872427983539072, "ret_1m": 10.291262135922308, "ret_6m": 32.09302325581396, "main_net": 50362185.0, "news": null, "score": -1.5, "pros": ["主力净流入0.5亿(占成交12%)"], "cons": ["封单仅占流通0.05%,偏薄", "破增发价股仅此1只,题材辨识度弱", "无明确消息,纯情绪/资金驱动", "炸板7次,20cm反复=天地板风险"]}], "all_dates": ["2026-06-05", "2026-06-08", "2026-06-09", "2026-06-10", "2026-06-11", "2026-06-12", "2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-22", "2026-06-23", "2026-06-24"]};
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtYi = v => v==null?"—":(v/1e8).toFixed(1)+"亿";
+const fmtRet = v => v==null?'<span class="na">—</span>':`<span class="${v>=0?'pos':'neg2'}">${v>=0?'+':''}${v.toFixed(0)}%</span>`;
+const fmtPct = v => v==null?"—":(v*100).toFixed(0)+"%";
+const fmtPe = v => v==null?"—":(v<0?"亏损":v.toFixed(1));
+
+// 日期切换
+(()=>{ const sel=document.getElementById("sel"), ds=D.all_dates;
+  sel.innerHTML=ds.map(d=>`<option ${d===D.date?"selected":""}>${d}</option>`).join("");
+  const go=d=>{ if(d&&d!==D.date) location.href=encodeURIComponent(`${d}_创业板.html`); };
+  sel.onchange=()=>go(sel.value);
+  const i=ds.indexOf(D.date), p=document.getElementById("prev"), n=document.getElementById("next");
+  p.disabled=i<=0; n.disabled=i<0||i>=ds.length-1;
+  p.onclick=()=>go(ds[i-1]); n.onclick=()=>go(ds[i+1]);
+})();
+
+// 择时横幅
+(()=>{ const r=D.regime, cls=r.regime.includes("占优")?"占优":r.regime.includes("降温")?"降温":"中性";
+  document.getElementById("regime").innerHTML =
+    `<div class="regime ${cls}"><div class="tag">${esc(r.regime)}</div>
+     <div class="why">${esc(r.reason).split(";").map(x=>"· "+x).join("<br>")}</div></div>`;
+})();
+
+// 情绪卡片
+(()=>{ const s=D.senti;
+  const cards=[
+    ["创业板涨停",`${s.zt_count}只`],
+    ["其中首板",`${s.first_board}只`],
+    ["占全市场涨停",fmtPct(s.ratio)],
+    ["炸板率",s.zb_rate==null?"—":fmtPct(s.zb_rate)+" ⚠"],
+    ["跌停",`${s.dt_count}只`],
+    ["昨涨停次日均涨",s.yest_avg_pct==null?"—":(s.yest_avg_pct>=0?"+":"")+s.yest_avg_pct.toFixed(1)+"%"],
+    ["晋级率",s.promo_rate==null?"—":fmtPct(s.promo_rate)],
+  ];
+  document.getElementById("senti").innerHTML=cards.map(c=>
+    `<div class="scard"><div class="k">${c[0]}</div><div class="v">${c[1]}</div></div>`).join("");
+})();
+
+// 趋势图:占比 + 创业板/主板溢价
+(()=>{ const ser=D.regime.series;
+  try{ const inst=echarts.init(document.getElementById("trend")); inst.setOption({
+    tooltip:{trigger:"axis"}, legend:{data:["创业板涨停占比%","创业板次日溢价%","主板次日溢价%"],textStyle:{color:"#8b94a5"}},
+    grid:{left:44,right:30,top:34,bottom:24},
+    xAxis:{type:"category",data:ser.map(s=>s.date.slice(5)),axisLabel:{color:"#8b94a5"}},
+    yAxis:[{type:"value",name:"占比%",axisLabel:{color:"#8b94a5"}},{type:"value",name:"溢价%",axisLabel:{color:"#8b94a5"}}],
+    series:[
+      {name:"创业板涨停占比%",type:"bar",data:ser.map(s=>+(s.ratio*100).toFixed(1)),itemStyle:{color:"#9b7bf0"}},
+      {name:"创业板次日溢价%",type:"line",yAxisIndex:1,data:ser.map(s=>s.cyb_prem==null?null:+s.cyb_prem.toFixed(1)),itemStyle:{color:"#f7b955"}},
+      {name:"主板次日溢价%",type:"line",yAxisIndex:1,data:ser.map(s=>s.main_prem==null?null:+s.main_prem.toFixed(1)),itemStyle:{color:"#5f8fef"}},
+    ]});
+    // 容器布局完成后再 resize 一次,避免 init 抢在布局前拿到 0 宽
+    requestAnimationFrame(()=>inst.resize());
+    window.addEventListener("resize",()=>inst.resize());
+  }catch(e){ document.getElementById("trend").innerHTML='<div class="empty">趋势图需联网加载 ECharts</div>'; }
+})();
+
+// 机会清单
+(()=>{ const el=document.getElementById("picks");
+  if(!D.picks.length){ el.innerHTML='<div class="empty">今日创业板无首板涨停。</div>'; return; }
+  el.innerHTML = D.picks.map((p,i)=>`
+   <div class="pick ${p.score>=4?'top':''}">
+     <div class="prow">
+       <span class="rank">#${i+1}</span>
+       <span class="pcode">${p.code}</span>
+       <span class="pname">${esc(p.name)}</span>
+       <span class="scorebadge ${p.score<0?'neg':''}">评分 ${p.score}</span>
+       <span class="pprice">${p.price==null?"—":p.price.toFixed(2)}元</span>
+     </div>
+     <div class="rets">
+       <div class="ret"><div class="k">周</div><div class="v">${fmtRet(p.ret_1w)}</div></div>
+       <div class="ret"><div class="k">月</div><div class="v">${fmtRet(p.ret_1m)}</div></div>
+       <div class="ret"><div class="k">半年</div><div class="v">${fmtRet(p.ret_6m)}</div></div>
+     </div>
+     <div class="nums">
+       <div class="num"><span class="nk">题材</span> <b>${esc(p.theme)||"—"}</b>${p.resonance>=2?`·${p.resonance}响`:""}</div>
+       <div class="num"><span class="nk">封单</span> <b>${fmtYi(p.seal_amount)}</b>${p.seal_to_float!=null?`/流通${(p.seal_to_float*100).toFixed(1)}%`:""}</div>
+       <div class="num"><span class="nk">首封</span> <b>${p.first_seal_time||"—"}</b>${p.open_times?`·炸${p.open_times}`:""}</div>
+       <div class="num"><span class="nk">主力</span> <b>${p.main_net==null?"—":fmtYi(p.main_net)}</b></div>
+       <div class="num"><span class="nk">PE</span> <b>${fmtPe(p.pe_ttm)}</b></div>
+       <div class="num"><span class="nk">换手</span> <b>${p.turnover==null?"—":p.turnover.toFixed(0)+"%"}</b></div>
+     </div>
+     <div class="judge">
+       ${p.pros.map(x=>`<div class="jline"><span class="plus">▲</span><span>${esc(x)}</span></div>`).join("")}
+       ${p.cons.map(x=>`<div class="jline"><span class="minus">▽</span><span>${esc(x)}</span></div>`).join("")}
+     </div>
+   </div>`).join("");
+})();
+</script>
+</body>
+</html>

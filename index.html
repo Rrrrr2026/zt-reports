@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A股涨停复盘 · 档案馆</title>
+<style>
+  :root { --red:#e23b41; --green:#1e8e3e; --bg:#11151c; --panel:#1a2029;
+          --card:#212936; --ink:#e8eaf0; --muted:#8b94a5; --line:#2d3645; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:32px 20px 60px; background:var(--bg); color:var(--ink);
+         font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+         max-width:860px; margin-inline:auto; }
+  h1 { font-size:22px; margin:0 0 6px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:24px; }
+  .day { background:var(--card); border:1px solid var(--line); border-radius:14px;
+         padding:16px 18px; margin-bottom:14px; }
+  .dhead { display:flex; flex-wrap:wrap; align-items:baseline; gap:12px; }
+  .date { font-size:17px; font-weight:700; }
+  .phase { background:var(--red); color:#fff; border-radius:6px;
+           padding:1px 10px; font-size:12px; }
+  .stats { color:var(--muted); font-size:13px; }
+  .links { margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; }
+  .links a { display:inline-block; background:var(--panel); color:#7aa5f7;
+             border:1px solid var(--line); border-radius:8px; padding:7px 16px;
+             font-size:14px; text-decoration:none; }
+  .links a:hover { border-color:#7aa5f7; }
+  .links a.hot { color:#f7b955; }
+  .links a.cyb { color:#9b7bf0; }
+  .links a.watch { color:#5f8fef; }
+  .links a.data { color:#5fd08a; }
+  .hint { color:var(--muted); font-size:12px; margin-top:24px; line-height:1.8; }
+</style>
+</head>
+<body>
+<h1>A股涨停复盘 · 档案馆</h1>
+<div class="sub">共 13 个交易日 · 最近更新 2026-06-24 · 双击本文件即可在任何电脑打开</div>
+<div id="list"></div>
+<div class="hint">
+  · 把整个 reports 文件夹拷贝/同步到其他电脑(含 Windows),双击 index.html 即可使用;<br>
+  · 《涨停卡片》完全离线可用;《复盘报告》的图表需联网加载 ECharts,表格部分离线可用;<br>
+  · 本页与全部报告由系统每日收盘后自动生成,仅为复盘学习,不构成投资建议。
+</div>
+<script>
+const DAYS = [{"date": "2026-06-24", "phase": "高潮", "stats": "涨停98 · 跌停12 · 炸板率19% · 高度4板 · 3.28万亿", "hasCyb": true, "hasWatch": true, "hasCsv": true}, {"date": "2026-06-23", "phase": "震荡", "stats": "涨停94 · 跌停39 · 炸板率34% · 高度5板", "hasCyb": true, "hasWatch": true, "hasCsv": true}, {"date": "2026-06-22", "phase": "高潮", "stats": "涨停132 · 跌停4 · 炸板率16% · 高度5板", "hasCyb": true, "hasWatch": true, "hasCsv": true}, {"date": "2026-06-18", "phase": "震荡", "stats": "涨停91 · 跌停12 · 炸板率31% · 高度4板 · 3.31万亿", "hasCyb": true, "hasWatch": true, "hasCsv": true}, {"date": "2026-06-17", "phase": "震荡", "stats": "涨停85 · 跌停1 · 炸板率25% · 高度3板", "hasCyb": true, "hasWatch": true, "hasCsv": true}, {"date": "2026-06-16", "phase": "高潮", "stats": "涨停116 · 跌停7 · 炸板率25% · 高度4板 · 3.06万亿", "hasCyb": true, "hasWatch": true, "hasCsv": true}, {"date": "2026-06-15", "phase": "高潮", "stats": "涨停145 · 跌停3 · 炸板率22% · 高度3板 · 3.03万亿", "hasCyb": true, "hasWatch": true, "hasCsv": true}, {"date": "2026-06-12", "phase": "震荡", "stats": "涨停88 · 跌停15 · 炸板率41% · 高度4板 · 3.21万亿", "hasCyb": true, "hasWatch": true, "hasCsv": true}, {"date": "2026-06-11", "phase": "震荡", "stats": "涨停69 · 跌停32 · 炸板率30% · 高度3板 · 2.55万亿", "hasCyb": true, "hasWatch": true, "hasCsv": true}, {"date": "2026-06-10", "phase": "震荡", "stats": "涨停71 · 跌停25 · 炸板率20% · 高度4板", "hasCyb": true, "hasWatch": true, "hasCsv": true}, {"date": "2026-06-09", "phase": "修复", "stats": "涨停128 · 跌停9 · 炸板率16% · 高度3板", "hasCyb": true, "hasWatch": true, "hasCsv": true}, {"date": "2026-06-08", "phase": "高潮", "stats": "涨停55 · 跌停35 · 炸板率15% · 高度6板", "hasCyb": true, "hasWatch": true, "hasCsv": true}, {"date": "2026-06-05", "phase": "震荡", "stats": "涨停71 · 跌停11 · 炸板率42% · 高度5板", "hasCyb": true, "hasWatch": true, "hasCsv": true}];
+const SUB = {"cards": "卡片", "chinext": "创业板", "review": "复盘", "data": "数据", "watch": "次日观察"};   // {cards:"卡片", chinext:"创业板", review:"复盘", data:"数据"}
+const z = (s) => encodeURIComponent(s);
+// 子文件夹 + 文件名,各段分别编码(斜杠保留为路径分隔)
+const href = (kind, fname) => z(SUB[kind]) + "/" + z(fname);
+document.getElementById("list").innerHTML = DAYS.map(d => `
+  <div class="day">
+    <div class="dhead">
+      <span class="date">${d.date}</span>
+      ${d.phase ? `<span class="phase">${d.phase}</span>` : ""}
+      <span class="stats">${d.stats}</span>
+    </div>
+    <div class="links">
+      <a class="hot" href="${href('cards', d.date + "_涨停卡片.html")}">▦ 涨停卡片</a>
+      ${d.hasCyb ? `<a class="cyb" href="${href('chinext', d.date + "_创业板.html")}">🚀 创业板机会</a>` : ""}
+      ${d.hasWatch ? `<a class="watch" href="${href('watch', d.date + "_次日观察.html")}">🔭 次日观察</a>` : ""}
+      <a href="${href('review', d.date + "_复盘.html")}">📈 复盘报告</a>
+      ${d.hasCsv ? `<a class="data" href="${href('data', d.date + "_涨停数据.csv")}" download>📄 数据表(发给AI/Excel)</a>` : ""}
+    </div>
+  </div>`).join("");
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-06-16 次日观察</title>
+<style>
+  :root{--bg:#10131a;--panel:#1a1f2b;--card:#212a3a;--ink:#e8eaf0;--muted:#8b94a5;
+        --line:#2d3748;--hit:#5fd08a;--miss:#e8694a;--gold:#f7b955;--accent:#5f8fef;}
+  *{box-sizing:border-box;} body{margin:0;padding:22px 20px 60px;background:var(--bg);
+    color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",sans-serif;max-width:1000px;margin-inline:auto;}
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;}
+  h1{font-size:20px;margin:0;} h1 .a{color:var(--accent);}
+  .sub{color:var(--muted);font-size:12px;}
+  .datenav{margin-left:auto;display:flex;gap:8px;align-items:center;}
+  .datenav button,.datenav select{background:var(--card);color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:6px 12px;font-size:14px;cursor:pointer;} .datenav button:disabled{opacity:.35;}
+  h2{font-size:16px;margin:26px 0 12px;border-left:4px solid var(--accent);padding-left:9px;}
+  .disc{background:#2a2410;border:1px solid #5a4a18;border-radius:10px;padding:10px 14px;
+    font-size:12px;color:#e8d9a0;line-height:1.7;margin-top:14px;}
+  .score{display:flex;flex-wrap:wrap;gap:10px;}
+  .sc{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 16px;min-width:130px;}
+  .sc .k{font-size:11px;color:var(--muted);} .sc .v{font-size:22px;font-weight:700;}
+  .sc .n{font-size:11px;color:var(--muted);}
+  .h{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 15px;margin-bottom:10px;}
+  .h.hit{border-left:4px solid var(--hit);} .h.miss{border-left:4px solid var(--miss);}
+  .h.na{border-left:4px solid var(--muted);} .h.pending{border-left:4px solid var(--gold);}
+  .h .top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .tag{font-size:11px;border-radius:5px;padding:1px 8px;background:var(--panel);color:var(--accent);border:1px solid var(--line);}
+  .res{font-size:13px;font-weight:700;margin-left:auto;}
+  .res.hit{color:var(--hit);} .res.miss{color:var(--miss);} .res.na{color:var(--muted);}
+  .hyp{font-size:14px;margin:6px 0 3px;} .basis{font-size:12px;color:var(--muted);line-height:1.6;}
+  .prior{font-size:11px;color:var(--gold);}
+  table{border-collapse:collapse;width:100%;background:var(--card);font-size:13px;border-radius:10px;overflow:hidden;}
+  th{background:var(--panel);color:var(--muted);} th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;}
+  .up{color:#e8694a;} .dn{color:#5fd08a;}
+  .empty{color:var(--muted);padding:16px;background:var(--panel);border-radius:10px;}
+</style></head><body>
+<header>
+  <h1><span class="a">次日观察</span> · 2026-06-16</h1>
+  <span class="sub">资金行为假设 → 次日自检命中率</span>
+  <div class="datenav"><button id="prev">‹</button><select id="sel"></select><button id="next">›</button></div>
+</header>
+
+<div class="disc">⚠️ 本页全部为<b>规则化概率假设</b>,不是买入信号、更不构成投资建议。"先验"是历史命中率(样本不足时用种子值)。
+  目前累计样本很小,命中率仅供观察"方法灵不灵",统计上还不可信——样本攒到几百条后才有参考价值。</div>
+
+<h2>命中率计分板</h2>
+<div class="score" id="score"></div>
+
+<h2>今日验证 <span class="sub">(昨天的假设,今天应验了吗)</span></h2>
+<div id="validated"></div>
+
+<h2>明日观察 <span class="sub" id="tmrLabel"></span></h2>
+<div id="tomorrow"></div>
+
+<h2>题材动量榜 <span class="sub">(假设的来源:谁在升温/退潮)</span></h2>
+<table id="mom"></table>
+
+<script>
+const D={"date": "2026-06-16", "target_date": "2026-06-17", "hitrate": {"by_kind": {"leader_promote": {"cn": "龙头晋级", "n": 12, "hit": 3, "rate": 0.25}, "low_followup": {"cn": "低位补涨", "n": 39, "hit": 21, "rate": 0.5384615384615384}, "sentiment_regime": {"cn": "情绪延续", "n": 12, "hit": 11, "rate": 0.9166666666666666}, "theme_continue": {"cn": "题材延续", "n": 48, "hit": 46, "rate": 0.9583333333333334}}, "overall": {"n": 111, "hit": 81, "rate": 0.7297297297297297}}, "kindCn": {"theme_continue": "题材延续", "leader_promote": "龙头晋级", "low_followup": "低位补涨", "sentiment_regime": "情绪延续"}, "validated": [{"kind": "leader_promote", "name": "新金路", "hyp": "空间板新金路(3板)明日观察能否晋级4板", "basis": "市场最高标,3板→4板历史晋级率约50%;它若断板,高位梯队承压", "prior": 0.5, "outcome": "miss", "detail": "次日未涨停/断板"}, {"kind": "low_followup", "name": "实益达", "hyp": "低位首板实益达若5G概念延续,容错较高,观察明日是否红盘", "basis": "5G概念题材内首板,封单占流通2.8%(历史命中72%)", "prior": 0.722, "outcome": "miss", "detail": "次日-2.8%"}, {"kind": "low_followup", "name": "南 京 港", "hyp": "低位首板南 京 港若央国企改革延续,容错较高,观察明日是否红盘", "basis": "央国企改革题材内首板,封单占流通1.6%(历史命中72%)", "prior": 0.722, "outcome": "miss", "detail": "次日-5.2%"}, {"kind": "sentiment_regime", "name": "全市场赚钱效应", "hyp": "今日昨涨停溢价+2.23%,预计明日打板溢价仍为正(偏容错)", "basis": "赚钱效应自相关(先验种子)", "prior": 0.89, "outcome": "hit", "detail": "次日溢价+4.11%"}, {"kind": "theme_continue", "name": "通信技术", "hyp": "通信技术(活跃)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日35只涨停(昨1),连续1天活跃,动量分88.3(历史命中90%/n=20)", "prior": 0.9, "outcome": "hit", "detail": "次日21只涨停"}, {"kind": "theme_continue", "name": "华为概念", "hyp": "华为概念(主升期)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日34只涨停(昨7),连续7天活跃,动量分82.5(历史命中90%/n=20)", "prior": 0.9, "outcome": "hit", "detail": "次日26只涨停"}, {"kind": "theme_continue", "name": "5G概念", "hyp": "5G概念(主升期)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日28只涨停(昨2),连续5天活跃,动量分73.2(历史命中90%/n=20)", "prior": 0.9, "outcome": "hit", "detail": "次日14只涨停"}, {"kind": "theme_continue", "name": "央国企改革", "hyp": "央国企改革(主升期)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日36只涨停(昨28),连续7天活跃,动量分57.2(历史命中90%/n=20)", "prior": 0.9, "outcome": "hit", "detail": "次日33只涨停"}], "tomorrow": [{"kind": "leader_promote", "name": "盛龙股份", "hyp": "空间板盛龙股份(4板)明日观察能否晋级5板", "basis": "市场最高标,4板→5板历史晋级率约14%;它若断板,高位梯队承压", "prior": 0.143, "outcome": "miss", "detail": "次日未涨停/断板"}, {"kind": "low_followup", "name": "常铝股份", "hyp": "低位首板常铝股份若新能源车延续,容错较高,观察明日是否红盘", "basis": "新能源车题材内首板,封单占流通3.9%(历史命中73%)", "prior": 0.727, "outcome": "hit", "detail": "次日+4.1%"}, {"kind": "low_followup", "name": "武汉凡谷", "hyp": "低位首板武汉凡谷若华为概念延续,容错较高,观察明日是否红盘", "basis": "华为概念题材内首板,封单占流通1.4%(历史命中73%)", "prior": 0.727, "outcome": "miss", "detail": "次日-1.9%"}, {"kind": "low_followup", "name": "庄园牧场", "hyp": "低位首板庄园牧场若西部大开发延续,容错较高,观察明日是否红盘", "basis": "西部大开发题材内首板,封单占流通9.0%(历史命中73%)", "prior": 0.727, "outcome": "miss", "detail": "次日-0.4%"}, {"kind": "sentiment_regime", "name": "全市场赚钱效应", "hyp": "今日昨涨停溢价+4.11%,预计明日打板溢价仍为正(偏容错)", "basis": "赚钱效应自相关(先验种子)", "prior": 0.89, "outcome": "hit", "detail": "次日溢价+2.31%"}, {"kind": "theme_continue", "name": "华为概念", "hyp": "华为概念(活跃)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日26只涨停(昨34),连续8天活跃,动量分35.2(历史命中92%/n=24)", "prior": 0.917, "outcome": "hit", "detail": "次日24只涨停"}, {"kind": "theme_continue", "name": "央国企改革", "hyp": "央国企改革(活跃)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日33只涨停(昨36),连续8天活跃,动量分44.1(历史命中92%/n=24)", "prior": 0.917, "outcome": "hit", "detail": "次日23只涨停"}, {"kind": "theme_continue", "name": "新能源车", "hyp": "新能源车(主升期)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日29只涨停(昨24),连续8天活跃,动量分45.7(历史命中92%/n=24)", "prior": 0.917, "outcome": "hit", "detail": "次日6只涨停"}, {"kind": "theme_continue", "name": "西部大开发", "hyp": "西部大开发(主升期)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日16只涨停(昨9),连续8天活跃,动量分35.5(历史命中92%/n=24)", "prior": 0.917, "outcome": "hit", "detail": "次日11只涨停"}], "momentum": [{"theme": "新能源车", "zt": 29, "prev": 24, "delta": 5, "streak": 8, "maxlb": 2, "zb": 7, "stage": "主升期", "mom": 45.7, "leader": "诺德股份"}, {"theme": "央国企改革", "zt": 33, "prev": 36, "delta": -3, "streak": 8, "maxlb": 4, "zb": 10, "stage": "活跃", "mom": 44.1, "leader": "盛龙股份"}, {"theme": "西部大开发", "zt": 16, "prev": 9, "delta": 7, "streak": 8, "maxlb": 2, "zb": 5, "stage": "主升期", "mom": 35.5, "leader": "中国西电"}, {"theme": "华为概念", "zt": 26, "prev": 34, "delta": -8, "streak": 8, "maxlb": 2, "zb": 7, "stage": "活跃", "mom": 35.2, "leader": "旭光电子"}, {"theme": "电池技术", "zt": 24, "prev": 24, "delta": 0, "streak": 8, "maxlb": 2, "zb": 6, "stage": "主升期", "mom": 33.2, "leader": "诺德股份"}, {"theme": "深圳特区", "zt": 11, "prev": 1, "delta": 10, "streak": 1, "maxlb": 2, "zb": 3, "stage": "活跃", "mom": 28.1, "leader": "麦格米特"}, {"theme": "通信技术", "zt": 21, "prev": 35, "delta": -14, "streak": 2, "maxlb": 2, "zb": 6, "stage": "活跃", "mom": 24.1, "leader": "旭光电子"}, {"theme": "锂电池概念", "zt": 15, "prev": 14, "delta": 1, "streak": 6, "maxlb": 2, "zb": 2, "stage": "主升期", "mom": 24.0, "leader": "诺德股份"}, {"theme": "一带一路", "zt": 16, "prev": 21, "delta": -5, "streak": 3, "maxlb": 4, "zb": 1, "stage": "活跃", "mom": 22.8, "leader": "深桑达Ａ"}, {"theme": "节能环保", "zt": 7, "prev": 4, "delta": 3, "streak": 8, "maxlb": 3, "zb": 1, "stage": "主升期", "mom": 22.0, "leader": "安德利"}], "all_dates": ["2026-06-05", "2026-06-08", "2026-06-09", "2026-06-10", "2026-06-11", "2026-06-12", "2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-22", "2026-06-23", "2026-06-24"]};
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pct=v=>v==null?"—":(v*100).toFixed(0)+"%";
+const RES={hit:"✓ 应验",miss:"✗ 未验",na:"— 无数据",pending:"待验证"};
+
+// 日期切换
+(()=>{const sel=document.getElementById("sel"),ds=D.all_dates;
+ sel.innerHTML=ds.map(d=>`<option ${d===D.date?"selected":""}>${d}</option>`).join("");
+ const go=d=>{if(d&&d!==D.date)location.href=encodeURIComponent(`${d}_次日观察.html`);};
+ sel.onchange=()=>go(sel.value);
+ const i=ds.indexOf(D.date),p=document.getElementById("prev"),n=document.getElementById("next");
+ p.disabled=i<=0;n.disabled=i<0||i>=ds.length-1;p.onclick=()=>go(ds[i-1]);n.onclick=()=>go(ds[i+1]);})();
+
+// 计分板
+(()=>{const hr=D.hitrate;const cards=[];
+ const o=hr.overall;
+ cards.push(["总命中率",o.rate==null?"—":pct(o.rate),`n=${o.n}`]);
+ for(const k in hr.by_kind){const b=hr.by_kind[k];cards.push([b.cn,pct(b.rate),`${b.hit}/${b.n}`]);}
+ document.getElementById("score").innerHTML=cards.map(c=>
+   `<div class="sc"><div class="k">${c[0]}</div><div class="v">${c[1]}</div><div class="n">${c[2]}</div></div>`).join("")
+   || '<div class="empty">尚无已验证假设</div>';})();
+
+function card(h){return `<div class="h ${h.outcome}">
+  <div class="top"><span class="tag">${esc(D.kindCn[h.kind]||h.kind)}</span>
+    <b>${esc(h.name)}</b>
+    <span class="res ${h.outcome}">${RES[h.outcome]||h.outcome}${h.detail?(" · "+esc(h.detail)):""}</span></div>
+  <div class="hyp">${esc(h.hyp)}</div>
+  <div class="basis">${esc(h.basis)}</div>
+  <div class="prior">先验命中概率 ${pct(h.prior)}</div></div>`;}
+
+document.getElementById("validated").innerHTML = D.validated.length
+  ? D.validated.map(card).join("") : '<div class="empty">无(这是库内首日,昨天没有生成假设)</div>';
+document.getElementById("tmrLabel").textContent = D.target_date?`(目标日 ${D.target_date})`:"";
+document.getElementById("tomorrow").innerHTML = D.tomorrow.length
+  ? D.tomorrow.map(card).join("") : '<div class="empty">今日无主线题材,未生成假设</div>';
+
+document.getElementById("mom").innerHTML =
+  "<tr><th>题材</th><th>涨停(昨)</th><th>连续</th><th>最高板</th><th>炸板</th><th>阶段</th><th>动量</th><th>龙头</th></tr>"
+  + D.momentum.map(m=>{const ar=m.delta>0?'<span class="up">↑</span>':(m.delta<0?'<span class="dn">↓</span>':"→");
+    return `<tr><td>${esc(m.theme)}</td><td>${m.zt}(${m.prev})${ar}</td><td>${m.streak}天</td><td>${m.maxlb}板</td><td>${m.zb}</td><td>${esc(m.stage)}</td><td>${m.mom}</td><td>${esc(m.leader)}</td></tr>`;}).join("");
+</script></body></html>
