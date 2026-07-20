@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026-07-20 次日观察</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  :root{--bg:#10131a;--panel:#1a1f2b;--card:#212a3a;--ink:#e8eaf0;--muted:#8b94a5;
+        --line:#2d3748;--hit:#5fd08a;--miss:#e8694a;--gold:#f7b955;--accent:#5f8fef;}
+  *{box-sizing:border-box;} body{margin:0;padding:22px 20px 60px;background:var(--bg);
+    color:var(--ink);font-family:"PingFang SC","Microsoft YaHei",sans-serif;max-width:1000px;margin-inline:auto;}
+  header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;}
+  h1{font-size:20px;margin:0;} h1 .a{color:var(--accent);}
+  .sub{color:var(--muted);font-size:12px;}
+  .datenav{margin-left:auto;display:flex;gap:8px;align-items:center;}
+  .datenav button,.datenav select{background:var(--card);color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:6px 12px;font-size:14px;cursor:pointer;} .datenav button:disabled{opacity:.35;}
+  h2{font-size:16px;margin:26px 0 12px;border-left:4px solid var(--accent);padding-left:9px;}
+  .disc{background:#2a2410;border:1px solid #5a4a18;border-radius:10px;padding:10px 14px;
+    font-size:12px;color:#e8d9a0;line-height:1.7;margin-top:14px;}
+  .score{display:flex;flex-wrap:wrap;gap:10px;}
+  .sc{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 16px;min-width:130px;}
+  .sc .k{font-size:11px;color:var(--muted);} .sc .v{font-size:22px;font-weight:700;}
+  .sc .n{font-size:11px;color:var(--muted);}
+  .h{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 15px;margin-bottom:10px;}
+  .h.hit{border-left:4px solid var(--hit);} .h.miss{border-left:4px solid var(--miss);}
+  .h.na{border-left:4px solid var(--muted);} .h.pending{border-left:4px solid var(--gold);}
+  .h .top{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .tag{font-size:11px;border-radius:5px;padding:1px 8px;background:var(--panel);color:var(--accent);border:1px solid var(--line);}
+  .res{font-size:13px;font-weight:700;margin-left:auto;}
+  .res.hit{color:var(--hit);} .res.miss{color:var(--miss);} .res.na{color:var(--muted);}
+  .hyp{font-size:14px;margin:6px 0 3px;} .basis{font-size:12px;color:var(--muted);line-height:1.6;}
+  .prior{font-size:11px;color:var(--gold);}
+  table{border-collapse:collapse;width:100%;background:var(--card);font-size:13px;border-radius:10px;overflow:hidden;}
+  th{background:var(--panel);color:var(--muted);} th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;}
+  .up{color:#e8694a;} .dn{color:#5fd08a;}
+  .empty{color:var(--muted);padding:16px;background:var(--panel);border-radius:10px;}
+  .qlegend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+  .qchip{font-size:11px;color:var(--muted);border:1px solid var(--line);border-left-width:3px;
+         border-radius:5px;padding:3px 8px;}
+</style></head><body>
+<header>
+  <h1><span class="a">次日观察</span> · 2026-07-20</h1>
+  <span class="sub">资金行为假设 → 次日自检命中率</span>
+  <div class="datenav"><button id="prev">‹</button><select id="sel"></select><button id="next">›</button></div>
+</header>
+
+<div class="disc">⚠️ 本页全部为<b>规则化概率假设</b>,不是买入信号、更不构成投资建议。"先验"是历史命中率(样本不足时用种子值)。
+  目前累计样本很小,命中率仅供观察"方法灵不灵",统计上还不可信——样本攒到几百条后才有参考价值。</div>
+
+<h2>命中率计分板</h2>
+<div class="score" id="score"></div>
+
+<h2>今日验证 <span class="sub">(昨天的假设,今天应验了吗)</span></h2>
+<div id="validated"></div>
+
+<h2>明日观察 <span class="sub" id="tmrLabel"></span></h2>
+<div id="tomorrow"></div>
+
+<h2>策略自适应 <span class="sub">(各规律在不同环境下学到的命中率;胜率低且样本够→自动降级)</span></h2>
+<table id="adaptive"></table>
+
+<h2>题材四象限 <span class="sub">(横轴=动量Δ涨停数,纵轴=强度最高连板,气泡=涨停家数)</span></h2>
+<div id="quad" class="chart" style="height:420px;background:var(--panel);border-radius:12px;margin-top:10px;"></div>
+<div class="qlegend" id="qlegend"></div>
+
+<h2>题材动量榜 <span class="sub">(假设的来源:谁在升温/退潮)</span></h2>
+<table id="mom"></table>
+
+<script>
+const D={"date": "2026-07-20", "target_date": "2026-07-21", "hitrate": {"by_kind": {"high_low_switch": {"cn": "高低切", "n": 5, "hit": 3, "rate": 0.6}, "leader_promote": {"cn": "龙头晋级", "n": 27, "hit": 9, "rate": 0.3333333333333333}, "low_followup": {"cn": "低位补涨", "n": 84, "hit": 42, "rate": 0.5}, "sentiment_regime": {"cn": "情绪延续", "n": 26, "hit": 20, "rate": 0.7692307692307693}, "theme_continue": {"cn": "题材延续", "n": 108, "hit": 96, "rate": 0.8888888888888888}}, "overall": {"n": 250, "hit": 170, "rate": 0.68}}, "kindCn": {"theme_continue": "题材延续", "leader_promote": "龙头晋级", "low_followup": "低位补涨", "sentiment_regime": "情绪延续", "high_low_switch": "高低切"}, "validated": [{"kind": "leader_promote", "name": "艾艾精工", "hyp": "空间板艾艾精工(4板)明日观察能否晋级5板", "basis": "市场最高标,4板→5板历史晋级率约35%;它若断板,高位梯队承压", "prior": 0.35, "outcome": "miss", "detail": "次日未涨停/断板"}, {"kind": "low_followup", "name": "赣能股份", "hyp": "低位首板赣能股份若绿色电力延续,容错较高,观察明日是否红盘", "basis": "绿色电力题材内首板,封单占流通0.7%;[防守环境]近期命中47%(有效样本9.6)", "prior": 0.472, "outcome": "hit", "detail": "次日+9.9%"}, {"kind": "low_followup", "name": "甘咨询", "hyp": "低位首板甘咨询若西部大开发延续,容错较高,观察明日是否红盘", "basis": "西部大开发题材内首板,封单占流通0.1%;[防守环境]近期命中47%(有效样本9.6)", "prior": 0.472, "outcome": "miss", "detail": "次日-10.0%"}, {"kind": "sentiment_regime", "name": "全市场赚钱效应", "hyp": "今日昨涨停溢价-1.01%,预计明日打板溢价仍为负(偏险,宜轻仓)", "basis": "赚钱效应自相关;[防守环境]近期命中70%(有效样本3.2)", "prior": 0.696, "outcome": "miss", "detail": "次日溢价+0.79%"}, {"kind": "theme_continue", "name": "央国企改革", "hyp": "央国企改革(活跃)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日13只涨停(昨14),连续15天活跃;[防守环境]近期命中85%(有效样本12.8)", "prior": 0.846, "outcome": "hit", "detail": "次日31只涨停"}, {"kind": "theme_continue", "name": "西部大开发", "hyp": "西部大开发(主升期)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日6只涨停(昨4),连续15天活跃;[防守环境]近期命中85%(有效样本12.8)", "prior": 0.846, "outcome": "hit", "detail": "次日4只涨停"}, {"kind": "theme_continue", "name": "光伏概念", "hyp": "光伏概念(发酵期)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日8只涨停(昨0),连续1天活跃;[防守环境]近期命中85%(有效样本12.8)", "prior": 0.846, "outcome": "hit", "detail": "次日11只涨停"}, {"kind": "theme_continue", "name": "绿色电力", "hyp": "绿色电力(发酵期)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日8只涨停(昨0),连续1天活跃;[防守环境]近期命中85%(有效样本12.8)", "prior": 0.846, "outcome": "hit", "detail": "次日6只涨停"}], "tomorrow": [{"kind": "leader_promote", "name": "立新能源", "hyp": "空间板立新能源(3板)明日观察能否晋级4板", "basis": "市场最高标,3板→4板历史晋级率约31%;它若断板,高位梯队承压", "prior": 0.311, "outcome": "pending", "detail": null}, {"kind": "low_followup", "name": "粤电力Ａ", "hyp": "低位首板粤电力Ａ若风能延续,容错较高,观察明日是否红盘", "basis": "风能题材内首板,封单占流通0.6%;⚠该规律近期在此环境失效、已降级;[进攻环境]近期命中38%(有效样本11.9)", "prior": 0.38, "outcome": "pending", "detail": null}, {"kind": "low_followup", "name": "美利云", "hyp": "低位首板美利云若光伏概念延续,容错较高,观察明日是否红盘", "basis": "光伏概念题材内首板,封单占流通1.9%;⚠该规律近期在此环境失效、已降级;[进攻环境]近期命中38%(有效样本11.9)", "prior": 0.38, "outcome": "pending", "detail": null}, {"kind": "low_followup", "name": "中嘉博创", "hyp": "低位首板中嘉博创若华为概念延续,容错较高,观察明日是否红盘", "basis": "华为概念题材内首板,封单占流通2.8%;⚠该规律近期在此环境失效、已降级;[进攻环境]近期命中38%(有效样本11.9)", "prior": 0.38, "outcome": "pending", "detail": null}, {"kind": "sentiment_regime", "name": "全市场赚钱效应", "hyp": "今日昨涨停溢价+0.79%,预计明日打板溢价仍为正(偏容错)", "basis": "赚钱效应自相关;[进攻环境]近期命中86%(有效样本4.1)", "prior": 0.864, "outcome": "pending", "detail": null}, {"kind": "theme_continue", "name": "光伏概念", "hyp": "光伏概念(主升期)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日11只涨停(昨8),连续2天活跃;[进攻环境]近期命中82%(有效样本20.0)", "prior": 0.817, "outcome": "pending", "detail": null}, {"kind": "theme_continue", "name": "华为概念", "hyp": "华为概念(分歧期)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日5只涨停(昨4),连续15天活跃;[进攻环境]近期命中82%(有效样本20.0)", "prior": 0.817, "outcome": "pending", "detail": null}, {"kind": "theme_continue", "name": "央国企改革", "hyp": "央国企改革(主升期)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日31只涨停(昨13),连续15天活跃;[进攻环境]近期命中82%(有效样本20.0)", "prior": 0.817, "outcome": "pending", "detail": null}, {"kind": "theme_continue", "name": "风能", "hyp": "风能(发酵期)明日预计仍为活跃主线(≥2只涨停)", "basis": "今日13只涨停(昨0),连续1天活跃;[进攻环境]近期命中82%(有效样本20.0)", "prior": 0.817, "outcome": "pending", "detail": null}], "momentum": [{"theme": "央国企改革", "zt": 31, "prev": 13, "delta": 18, "streak": 15, "maxlb": 3, "zb": 12, "stage": "主升期", "mom": 74.9, "leader": "立新能源"}, {"theme": "风能", "zt": 13, "prev": 0, "delta": 13, "streak": 1, "maxlb": 3, "zb": 3, "stage": "发酵期", "mom": 35.8, "leader": "立新能源"}, {"theme": "华为概念", "zt": 5, "prev": 4, "delta": 1, "streak": 15, "maxlb": 1, "zb": 7, "stage": "分歧期", "mom": 20.2, "leader": "中嘉博创"}, {"theme": "光伏概念", "zt": 11, "prev": 8, "delta": 3, "streak": 2, "maxlb": 3, "zb": 4, "stage": "主升期", "mom": 19.4, "leader": "立新能源"}, {"theme": "西部大开发", "zt": 4, "prev": 6, "delta": -2, "streak": 15, "maxlb": 2, "zb": 4, "stage": "活跃", "mom": 19.0, "leader": "赤天化"}, {"theme": "反内卷概念", "zt": 7, "prev": 0, "delta": 7, "streak": 1, "maxlb": 1, "zb": 3, "stage": "发酵期", "mom": 18.3, "leader": "大有能源"}, {"theme": "破增发价股", "zt": 5, "prev": 6, "delta": -1, "streak": 8, "maxlb": 1, "zb": 4, "stage": "活跃", "mom": 12.2, "leader": "古井贡酒"}, {"theme": "新能源", "zt": 3, "prev": 0, "delta": 3, "streak": 1, "maxlb": 2, "zb": 0, "stage": "发酵期", "mom": 10.5, "leader": "乐山电力"}, {"theme": "绿色电力", "zt": 6, "prev": 8, "delta": -2, "streak": 2, "maxlb": 2, "zb": 0, "stage": "活跃", "mom": 10.0, "leader": "湖南发展"}, {"theme": "天然气", "zt": 3, "prev": 0, "delta": 3, "streak": 1, "maxlb": 1, "zb": 1, "stage": "发酵期", "mom": 8.5, "leader": "山东墨龙"}], "quadrant": [{"theme": "央国企改革", "x": 18, "y": 3, "size": 31, "stage": "主升期", "leader": "立新能源"}, {"theme": "风能", "x": 13, "y": 3, "size": 13, "stage": "发酵期", "leader": "立新能源"}, {"theme": "华为概念", "x": 1, "y": 1, "size": 5, "stage": "分歧期", "leader": "中嘉博创"}, {"theme": "光伏概念", "x": 3, "y": 3, "size": 11, "stage": "主升期", "leader": "立新能源"}, {"theme": "西部大开发", "x": -2, "y": 2, "size": 4, "stage": "活跃", "leader": "赤天化"}, {"theme": "反内卷概念", "x": 7, "y": 1, "size": 7, "stage": "发酵期", "leader": "大有能源"}, {"theme": "破增发价股", "x": -1, "y": 1, "size": 5, "stage": "活跃", "leader": "古井贡酒"}, {"theme": "新能源", "x": 3, "y": 2, "size": 3, "stage": "发酵期", "leader": "乐山电力"}, {"theme": "绿色电力", "x": -2, "y": 2, "size": 6, "stage": "活跃", "leader": "湖南发展"}, {"theme": "天然气", "x": 3, "y": 1, "size": 3, "stage": "发酵期", "leader": "山东墨龙"}, {"theme": "机器人概念", "x": 3, "y": 1, "size": 3, "stage": "发酵期", "leader": "三晖电气"}, {"theme": "储能概念", "x": 2, "y": 2, "size": 3, "stage": "活跃", "leader": "深南电A"}, {"theme": "HS300_", "x": 3, "y": 1, "size": 3, "stage": "发酵期", "leader": "古井贡酒"}, {"theme": "云计算", "x": 3, "y": 1, "size": 3, "stage": "发酵期", "leader": "杭钢股份"}, {"theme": "电商概念", "x": -2, "y": 1, "size": 2, "stage": "活跃", "leader": "双枪科技"}, {"theme": "2026中报扭亏", "x": 0, "y": 2, "size": 3, "stage": "主升期", "leader": "深南电A"}], "adaptive": [{"kind": "high_low_switch", "cn": "高低切", "regime": "中性", "hit": 1, "n": 1, "rate": 1.0, "verdict": "样本不足"}, {"kind": "high_low_switch", "cn": "高低切", "regime": "进攻", "hit": 0, "n": 1, "rate": 0.0, "verdict": "样本不足"}, {"kind": "high_low_switch", "cn": "高低切", "regime": "防守", "hit": 2, "n": 3, "rate": 0.6666666666666666, "verdict": "样本不足"}, {"kind": "leader_promote", "cn": "龙头晋级", "regime": "中性", "hit": 5, "n": 13, "rate": 0.38461538461538464, "verdict": "失效降级"}, {"kind": "leader_promote", "cn": "龙头晋级", "regime": "进攻", "hit": 2, "n": 9, "rate": 0.2222222222222222, "verdict": "失效降级"}, {"kind": "leader_promote", "cn": "龙头晋级", "regime": "防守", "hit": 2, "n": 5, "rate": 0.4, "verdict": "样本不足"}, {"kind": "low_followup", "cn": "低位补涨", "regime": "中性", "hit": 28, "n": 47, "rate": 0.5957446808510638, "verdict": "样本不足"}, {"kind": "low_followup", "cn": "低位补涨", "regime": "进攻", "hit": 8, "n": 23, "rate": 0.34782608695652173, "verdict": "失效降级"}, {"kind": "low_followup", "cn": "低位补涨", "regime": "防守", "hit": 6, "n": 14, "rate": 0.42857142857142855, "verdict": "样本不足"}, {"kind": "sentiment_regime", "cn": "情绪延续", "regime": "中性", "hit": 11, "n": 13, "rate": 0.8461538461538461, "verdict": "有效"}, {"kind": "sentiment_regime", "cn": "情绪延续", "regime": "进攻", "hit": 7, "n": 8, "rate": 0.875, "verdict": "有效"}, {"kind": "sentiment_regime", "cn": "情绪延续", "regime": "防守", "hit": 2, "n": 5, "rate": 0.4, "verdict": "样本不足"}, {"kind": "theme_continue", "cn": "题材延续", "regime": "中性", "hit": 46, "n": 52, "rate": 0.8846153846153846, "verdict": "有效"}, {"kind": "theme_continue", "cn": "题材延续", "regime": "进攻", "hit": 32, "n": 36, "rate": 0.8888888888888888, "verdict": "有效"}, {"kind": "theme_continue", "cn": "题材延续", "regime": "防守", "hit": 18, "n": 20, "rate": 0.9, "verdict": "有效"}], "all_dates": ["2026-06-05", "2026-06-08", "2026-06-09", "2026-06-10", "2026-06-11", "2026-06-12", "2026-06-15", "2026-06-16", "2026-06-17", "2026-06-18", "2026-06-22", "2026-06-23", "2026-06-24", "2026-06-25", "2026-06-26", "2026-06-29", "2026-06-30", "2026-07-01", "2026-07-02", "2026-07-03", "2026-07-06", "2026-07-07", "2026-07-08", "2026-07-09", "2026-07-13", "2026-07-14", "2026-07-16", "2026-07-17", "2026-07-20"]};
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pct=v=>v==null?"—":(v*100).toFixed(0)+"%";
+const RES={hit:"✓ 应验",miss:"✗ 未验",na:"— 无数据",pending:"待验证"};
+
+// 日期切换
+(()=>{const sel=document.getElementById("sel"),ds=D.all_dates;
+ sel.innerHTML=ds.map(d=>`<option ${d===D.date?"selected":""}>${d}</option>`).join("");
+ const go=d=>{if(d&&d!==D.date)location.href=encodeURIComponent(`${d}_次日观察.html`);};
+ sel.onchange=()=>go(sel.value);
+ const i=ds.indexOf(D.date),p=document.getElementById("prev"),n=document.getElementById("next");
+ p.disabled=i<=0;n.disabled=i<0||i>=ds.length-1;p.onclick=()=>go(ds[i-1]);n.onclick=()=>go(ds[i+1]);})();
+
+// 计分板
+(()=>{const hr=D.hitrate;const cards=[];
+ const o=hr.overall;
+ cards.push(["总命中率",o.rate==null?"—":pct(o.rate),`n=${o.n}`]);
+ for(const k in hr.by_kind){const b=hr.by_kind[k];cards.push([b.cn,pct(b.rate),`${b.hit}/${b.n}`]);}
+ document.getElementById("score").innerHTML=cards.map(c=>
+   `<div class="sc"><div class="k">${c[0]}</div><div class="v">${c[1]}</div><div class="n">${c[2]}</div></div>`).join("")
+   || '<div class="empty">尚无已验证假设</div>';})();
+
+function card(h){return `<div class="h ${h.outcome}">
+  <div class="top"><span class="tag">${esc(D.kindCn[h.kind]||h.kind)}</span>
+    <b>${esc(h.name)}</b>
+    <span class="res ${h.outcome}">${RES[h.outcome]||h.outcome}${h.detail?(" · "+esc(h.detail)):""}</span></div>
+  <div class="hyp">${esc(h.hyp)}</div>
+  <div class="basis">${esc(h.basis)}</div>
+  <div class="prior">先验命中概率 ${pct(h.prior)}</div></div>`;}
+
+document.getElementById("validated").innerHTML = D.validated.length
+  ? D.validated.map(card).join("") : '<div class="empty">无(这是库内首日,昨天没有生成假设)</div>';
+document.getElementById("tmrLabel").textContent = D.target_date?`(目标日 ${D.target_date})`:"";
+document.getElementById("tomorrow").innerHTML = D.tomorrow.length
+  ? D.tomorrow.map(card).join("") : '<div class="empty">今日无主线题材,未生成假设</div>';
+
+document.getElementById("mom").innerHTML =
+  "<tr><th>题材</th><th>涨停(昨)</th><th>连续</th><th>最高板</th><th>炸板</th><th>阶段</th><th>动量</th><th>龙头</th></tr>"
+  + D.momentum.map(m=>{const ar=m.delta>0?'<span class="up">↑</span>':(m.delta<0?'<span class="dn">↓</span>':"→");
+    return `<tr><td>${esc(m.theme)}</td><td>${m.zt}(${m.prev})${ar}</td><td>${m.streak}天</td><td>${m.maxlb}板</td><td>${m.zb}</td><td>${esc(m.stage)}</td><td>${m.mom}</td><td>${esc(m.leader)}</td></tr>`;}).join("");
+
+// 策略自适应表(各规律 × 环境 的学到胜率)
+(()=>{
+  const A = D.adaptive || [];
+  const vcls = v => v==="失效降级"?"miss":(v==="有效"?"hit":"");
+  document.getElementById("adaptive").innerHTML = A.length
+    ? "<tr><th>规律</th><th>环境</th><th>命中/样本</th><th>胜率</th><th>评定</th></tr>"
+      + A.map(a=>`<tr><td>${esc(a.cn)}</td><td>${esc(a.regime)}</td><td>${a.hit}/${a.n}</td>
+        <td>${(a.rate*100).toFixed(0)}%</td><td class="${vcls(a.verdict)}">${esc(a.verdict)}</td></tr>`).join("")
+    : '<tr><td class="empty" style="background:none">尚无已验证样本可学习</td></tr>';
+})();
+
+// 题材四象限散点图
+(()=>{
+  const Q = D.quadrant || [];
+  // 四个象限的含义(资金行为):右上=主升,左上=高位分歧,右下=新发酵,左下=退潮
+  const STAGE_COLOR = {"主升期":"#e23b41","发酵期":"#f7b955","分歧期":"#9b7bf0","退潮期":"#5fd08a","活跃":"#5f8fef"};
+  const ymax = Math.max(3, ...Q.map(q=>q.y)) + 0.5;
+  const xabs = Math.max(3, ...Q.map(q=>Math.abs(q.x))) + 1;
+  const yMid = 2.5;  // 高/低板分界
+  document.getElementById("qlegend").innerHTML =
+    '<span class="qchip" style="border-color:#e23b41">右上·主升主线(强且加速,核心)</span>'
+   +'<span class="qchip" style="border-color:#9b7bf0">左上·高位分歧(强但退烧,警惕)</span>'
+   +'<span class="qchip" style="border-color:#f7b955">右下·新发酵卡位(弱但升温,低吸)</span>'
+   +'<span class="qchip" style="border-color:#5fd08a">左下·退潮冷门(弱且降温,回避)</span>';
+  try{
+    const inst = echarts.init(document.getElementById("quad"));
+    inst.setOption({
+      grid:{left:50,right:30,top:30,bottom:46},
+      tooltip:{formatter:p=>`${esc(p.data.theme)}<br>动量Δ ${p.data.x>=0?'+':''}${p.data.x} · 最高${p.data.y}板<br>涨停${p.data.size}家 · ${esc(p.data.stage)}<br>龙头:${esc(p.data.leader)||'—'}`},
+      xAxis:{type:"value",name:"动量(Δ涨停数,昨→今)",nameLocation:"middle",nameGap:28,
+        min:-xabs,max:xabs,axisLabel:{color:"#8b94a5"},splitLine:{show:false},
+        axisLine:{lineStyle:{color:"#2d3748"}}},
+      yAxis:{type:"value",name:"强度(最高连板)",min:0,max:ymax,axisLabel:{color:"#8b94a5"},
+        splitLine:{show:false},axisLine:{lineStyle:{color:"#2d3748"}}},
+      series:[{
+        type:"scatter",
+        symbolSize:d=>Math.max(14, Math.min(60, d.size*3)),
+        data:Q.map(q=>({value:[q.x,q.y],...q,itemStyle:{color:(STAGE_COLOR[q.stage]||"#5f8fef"),opacity:0.8}})),
+        label:{show:true,formatter:p=>esc(p.data.theme),position:"top",color:"#c3cad6",fontSize:11},
+        markLine:{silent:true,symbol:"none",lineStyle:{color:"#3a4456",type:"dashed"},
+          data:[{xAxis:0},{yAxis:yMid}]},
+      }],
+    });
+    requestAnimationFrame(()=>inst.resize());
+    window.addEventListener("resize",()=>inst.resize());
+  }catch(e){ document.getElementById("quad").innerHTML='<div class="empty">四象限图需联网加载 ECharts</div>'; }
+})();
+</script></body></html>
