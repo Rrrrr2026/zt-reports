@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>2026-08-19 涨停复盘</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+  :root { --red:#d93025; --green:#1e8e3e; --bg:#f6f7f9; --card:#fff; --ink:#202124; --muted:#5f6368; }
+  * { box-sizing:border-box; }
+  body { font-family:"PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--ink); margin:0; padding:24px; }
+  h1 { font-size:22px; } h2 { font-size:17px; margin:28px 0 12px; border-left:4px solid var(--red); padding-left:8px; }
+  .cards { display:flex; flex-wrap:wrap; gap:12px; }
+  .card { background:var(--card); border-radius:10px; padding:14px 18px; min-width:130px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .card .v { font-size:24px; font-weight:700; } .card .t { font-size:12px; color:var(--muted); }
+  .card .delta { font-size:12px; margin-left:4px; }
+  .up { color:var(--red);} .dn { color:var(--green);}
+  .phase { display:inline-block; background:var(--red); color:#fff; border-radius:6px; padding:2px 10px; font-size:14px; }
+  .reason { color:var(--muted); font-size:13px; line-height:1.8; }
+  .chart { background:var(--card); border-radius:10px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-top:10px; }
+  table { border-collapse:collapse; width:100%; background:var(--card); font-size:13px; border-radius:10px; overflow:hidden; box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  th { background:#eef1f4; cursor:pointer; user-select:none; white-space:nowrap; }
+  th, td { padding:7px 10px; border-bottom:1px solid #eee; text-align:left; }
+  tr:hover td { background:#fafbfc; }
+  .tag { display:inline-block; background:#fce8e6; color:var(--red); border-radius:4px; padding:1px 6px; font-size:12px; margin-right:4px; }
+  .ladder-tier { display:flex; align-items:flex-start; gap:10px; margin-bottom:8px; }
+  .lb-badge { background:var(--red); color:#fff; min-width:52px; text-align:center; border-radius:8px; padding:8px 4px; font-weight:700; }
+  .lb-badge.low { background:#e8eaed; color:var(--ink); }
+  .stock-chip { display:inline-block; background:var(--card); border:1px solid #e0e0e0; border-radius:8px; padding:5px 10px; margin:3px; font-size:13px; }
+  .stock-chip b { color:var(--red); }
+  .chip-sub { color:var(--muted); font-size:11px; }
+  .warn { background:#fef7e0; border-radius:8px; padding:10px 14px; font-size:13px; }
+  .note { color:var(--muted); font-size:12px; }
+  .missing { background:#fce8e6; border-radius:8px; padding:8px 12px; font-size:12px; margin-top:6px;}
+</style>
+</head>
+<body>
+<h1>2026-08-19 涨停复盘 <span class="phase" id="phase"></span></h1>
+<div class="reason" id="reason"></div>
+
+<h2>一、市场总览</h2>
+<div class="cards" id="cards"></div>
+<div id="trend" class="chart" style="height:300px;"></div>
+
+<h2>二、题材主线</h2>
+<div id="themeChart" class="chart" style="height:340px;"></div>
+<table id="themeTable"></table>
+
+<h2>三、连板天梯</h2>
+<div id="gapWarn"></div>
+<div id="ladder"></div>
+
+<h2>四、晋级与溢价</h2>
+<div class="cards" id="promoCards"></div>
+<div id="premChart" class="chart" style="height:280px;"></div>
+
+<h2>五、龙虎榜聚焦</h2>
+<table id="lhbTable"></table>
+<div id="flowChart" class="chart" style="height:300px; margin-top:14px;"></div>
+
+<h2>六、明日关注 <span class="note">(复盘观察清单,不构成投资建议)</span></h2>
+<table id="watchTable"></table>
+
+<h2>七、数据附表</h2>
+<div id="newStocks" class="note"></div>
+<h3>涨停池(点击表头排序)</h3>
+<table id="ztTable"></table>
+<h3>炸板池</h3>
+<table id="zbTable"></table>
+<h3>跌停池</h3>
+<table id="dtTable"></table>
+<div id="missing"></div>
+
+<script>
+const D = {"date": "2026-08-19", "senti": {"zt": 36, "dt": 113, "zb": 12, "zbRate": 0.25, "maxLb": 3, "amount": 25110.43, "prem": -2.6390129316311617, "promo": 0.10256410256410256, "up": 420, "down": 4760, "phase": "冰点", "reason": "连板高度仅3板,资金不敢向高处接力——空间被锁死;昨日涨停股今日平均-2.6%,打板亏钱(亏钱效应)——最激进的资金在被惩罚;涨停家数(36)较5日均值(79)萎缩30%+", "promoDetail": {"1进2": "5/60", "2进3": "3/13", "3进4": "0/4", "4进5": "0/1"}}, "prev": {"zt": 78, "dt": 5, "zbRate": 0.22772277227722773, "maxLb": 4, "prem": 1.2468719836846691}, "hist": [{"d": "08-06", "zt": 79, "dt": 1, "zbRate": 20.2, "maxLb": 10, "prem": 3.951833220072163}, {"d": "08-07", "zt": 74, "dt": 4, "zbRate": 26.0, "maxLb": 4, "prem": 1.2116644456982613}, {"d": "08-10", "zt": 99, "dt": 5, "zbRate": 12.4, "maxLb": 5, "prem": 2.223346687450602}, {"d": "08-11", "zt": 58, "dt": 1, "zbRate": 22.7, "maxLb": 6, "prem": 0.809993174887195}, {"d": "08-12", "zt": 91, "dt": 0, "zbRate": 11.7, "maxLb": 7, "prem": 3.2919016994279007}, {"d": "08-13", "zt": 59, "dt": 4, "zbRate": 37.2, "maxLb": 5, "prem": 1.3132234236792377}, {"d": "08-14", "zt": 62, "dt": 10, "zbRate": 23.5, "maxLb": 5, "prem": 0.06079378471536152}, {"d": "08-17", "zt": 106, "dt": 1, "zbRate": 10.2, "maxLb": 4, "prem": 3.5695673282588682}, {"d": "08-18", "zt": 78, "dt": 5, "zbRate": 22.8, "maxLb": 4, "prem": 1.2468719836846691}, {"d": "08-19", "zt": 36, "dt": 113, "zbRate": 25.0, "maxLb": 3, "prem": -2.6390129316311617}], "themes": [{"theme": "破增发价股", "zt": 9, "zb": 2, "seal": 2.27, "maxlb": 2, "stage": "活跃", "streak": 8, "leader": "学大教育"}, {"theme": "央国企改革", "zt": 8, "zb": 4, "seal": 1.98, "maxlb": 3, "stage": "退潮期", "streak": 10, "leader": "京粮控股"}, {"theme": "转债标的", "zt": 5, "zb": 2, "seal": 2.44, "maxlb": 1, "stage": "发酵期", "streak": 1, "leader": "亿田智能"}, {"theme": "长江三角", "zt": 5, "zb": 1, "seal": 1.91, "maxlb": 1, "stage": "主升期", "streak": 8, "leader": "罗普斯金"}, {"theme": "病原体防治", "zt": 4, "zb": 0, "seal": 2.66, "maxlb": 1, "stage": "发酵期", "streak": 1, "leader": "哈三联"}, {"theme": "西部大开发", "zt": 4, "zb": 1, "seal": 0.68, "maxlb": 1, "stage": "活跃", "streak": 10, "leader": "我爱我家"}, {"theme": "2026中报首亏", "zt": 4, "zb": 1, "seal": 0.42, "maxlb": 3, "stage": "活跃", "streak": 4, "leader": "金健米业"}, {"theme": "创投", "zt": 3, "zb": 0, "seal": 1.3, "maxlb": 1, "stage": "发酵期", "streak": 1, "leader": "万和电气"}, {"theme": "新能源车", "zt": 3, "zb": 1, "seal": 1.09, "maxlb": 1, "stage": "退潮期", "streak": 10, "leader": "美锦能源"}, {"theme": "AB股", "zt": 3, "zb": 2, "seal": 0.86, "maxlb": 3, "stage": "分歧期", "streak": 1, "leader": "京粮控股"}, {"theme": "反内卷概念", "zt": 3, "zb": 0, "seal": 0.64, "maxlb": 1, "stage": "主升期", "streak": 2, "leader": "美锦能源"}, {"theme": "趋势股", "zt": 2, "zb": 0, "seal": 2.34, "maxlb": 1, "stage": "活跃", "streak": 3, "leader": "哈三联"}, {"theme": "化妆品概念", "zt": 2, "zb": 0, "seal": 1.53, "maxlb": 1, "stage": "发酵期", "streak": 1, "leader": "哈三联"}, {"theme": "人工智能", "zt": 2, "zb": 3, "seal": 1.31, "maxlb": 2, "stage": "活跃", "streak": 10, "leader": "学大教育"}, {"theme": "电商概念", "zt": 2, "zb": 0, "seal": 1.24, "maxlb": 1, "stage": "退潮期", "streak": 8, "leader": "万和电气"}, {"theme": "智能家居", "zt": 2, "zb": 1, "seal": 1.24, "maxlb": 1, "stage": "发酵期", "streak": 1, "leader": "万和电气"}, {"theme": "商业航天", "zt": 2, "zb": 0, "seal": 1.18, "maxlb": 1, "stage": "活跃", "streak": 3, "leader": "金利华电"}, {"theme": "电池技术", "zt": 2, "zb": 0, "seal": 1.06, "maxlb": 1, "stage": "活跃", "streak": 3, "leader": "金利华电"}, {"theme": "机器人概念", "zt": 2, "zb": 0, "seal": 0.99, "maxlb": 2, "stage": "退潮期", "streak": 8, "leader": "日丰股份"}, {"theme": "光伏概念", "zt": 2, "zb": 0, "seal": 0.89, "maxlb": 1, "stage": "发酵期", "streak": 1, "leader": "罗普斯金"}, {"theme": "参股银行", "zt": 2, "zb": 3, "seal": 0.89, "maxlb": 1, "stage": "退潮期", "streak": 4, "leader": "汉森制药"}, {"theme": "农业种植", "zt": 2, "zb": 2, "seal": 0.08, "maxlb": 3, "stage": "退潮期", "streak": 2, "leader": "红四方"}, {"theme": "养老概念", "zt": 2, "zb": 0, "seal": 0.07, "maxlb": 1, "stage": "发酵期", "streak": 1, "leader": "百合股份"}], "ladder": [{"lb": 3, "stocks": [{"name": "京粮控股", "code": "000505", "seal": 0.6, "stf": 1.27, "theme": "央国企改革", "open": 0, "fst": "093133"}, {"name": "金健米业", "code": "600127", "seal": 0.27, "stf": 0.53, "theme": "央国企改革", "open": 0, "fst": "092502"}, {"name": "红四方", "code": "603395", "seal": 0.07, "stf": 0.38, "theme": "农业种植", "open": 1, "fst": "092502"}]}, {"lb": 2, "stocks": [{"name": "日丰股份", "code": "002953", "seal": 0.96, "stf": 2.92, "theme": "机器人概念", "open": 1, "fst": "092500"}, {"name": "学大教育", "code": "000526", "seal": 0.94, "stf": 1.98, "theme": "半导体概念", "open": 1, "fst": "093324"}, {"name": "深华发Ａ", "code": "000020", "seal": 0.23, "stf": 0.93, "theme": "深圳特区", "open": 1, "fst": "093000"}, {"name": "万向德农", "code": "600371", "seal": 0.0, "stf": 0.02, "theme": "乡村振兴", "open": 5, "fst": "093118"}]}, {"lb": 1, "stocks": [{"name": "哈三联", "code": "002900", "seal": 1.48, "stf": 5.88, "theme": "趋势股", "open": 1, "fst": "093127"}, {"name": "亿田智能", "code": "300911", "seal": 1.45, "stf": 3.17, "theme": "转债标的", "open": 0, "fst": "130754"}, {"name": "万和电气", "code": "002543", "seal": 1.22, "stf": 2.43, "theme": "电商概念", "open": 0, "fst": "135157"}, {"name": "罗普斯金", "code": "002333", "seal": 0.86, "stf": 2.04, "theme": "光伏概念", "open": 0, "fst": "092500"}, {"name": "汉森制药", "code": "002412", "seal": 0.86, "stf": 2.05, "theme": "参股银行", "open": 1, "fst": "093342"}, {"name": "金利华电", "code": "300069", "seal": 0.78, "stf": 1.92, "theme": "电池技术", "open": 1, "fst": "095927"}, {"name": "速达股份", "code": "001277", "seal": 0.53, "stf": 3.52, "theme": "专用设备", "open": 0, "fst": "094227"}, {"name": "美锦能源", "code": "000723", "seal": 0.48, "stf": 0.28, "theme": "新能源车", "open": 2, "fst": "093536"}, {"name": "华锦股份", "code": "000059", "seal": 0.46, "stf": 0.57, "theme": "央国企改革", "open": 1, "fst": "130551"}, {"name": "江顺科技", "code": "001400", "seal": 0.4, "stf": 1.01, "theme": "风能", "open": 2, "fst": "095445"}, {"name": "我爱我家", "code": "000560", "seal": 0.37, "stf": 0.66, "theme": "西部大开发", "open": 4, "fst": "093327"}, {"name": "尚太科技", "code": "001301", "seal": 0.28, "stf": 0.18, "theme": "电池技术", "open": 10, "fst": "093121"}, {"name": "中交发展", "code": "000736", "seal": 0.26, "stf": 0.7, "theme": "央国企改革", "open": 0, "fst": "093348"}, {"name": "斯达半导", "code": "603290", "seal": 0.2, "stf": 0.08, "theme": "破增发价股", "open": 2, "fst": "095313"}, {"name": "西点药业", "code": "301130", "seal": 0.2, "stf": 1.01, "theme": "病原体防治", "open": 1, "fst": "093542"}, {"name": "南 京 港", "code": "002040", "seal": 0.16, "stf": 0.36, "theme": "央国企改革", "open": 3, "fst": "112209"}, {"name": "宝泰隆", "code": "601011", "seal": 0.12, "stf": 0.21, "theme": "破增发价股", "open": 0, "fst": "093002"}, {"name": "亨迪药业", "code": "301211", "seal": 0.12, "stf": 0.2, "theme": "流感", "open": 4, "fst": "093436"}, {"name": "永顺泰", "code": "001338", "seal": 0.11, "stf": 0.22, "theme": "央国企改革", "open": 7, "fst": "094515"}, {"name": "大有能源", "code": "600403", "seal": 0.08, "stf": 0.05, "theme": "央国企改革", "open": 0, "fst": "094829"}, {"name": "鲁信创投", "code": "600783", "seal": 0.05, "stf": 0.04, "theme": "央国企改革", "open": 1, "fst": "092502"}, {"name": "百合股份", "code": "603102", "seal": 0.05, "stf": 0.17, "theme": "养老概念", "open": 0, "fst": "093233"}, {"name": "中毅达", "code": "600610", "seal": 0.03, "stf": 0.06, "theme": "西部大开发", "open": 2, "fst": "102435"}, {"name": "日出东方", "code": "603366", "seal": 0.03, "stf": 0.05, "theme": "光伏概念", "open": 0, "fst": "110113"}, {"name": "陕西黑猫", "code": "601015", "seal": 0.03, "stf": 0.04, "theme": "西部大开发", "open": 1, "fst": "101531"}, {"name": "南都物业", "code": "603506", "seal": 0.02, "stf": 0.1, "theme": "机器人概念", "open": 1, "fst": "093014"}, {"name": "志邦家居", "code": "603801", "seal": 0.02, "stf": 0.07, "theme": "转债标的", "open": 1, "fst": "093238"}, {"name": "好太太", "code": "603848", "seal": 0.02, "stf": 0.03, "theme": "电商概念", "open": 2, "fst": "093616"}, {"name": "金能科技", "code": "603113", "seal": 0.01, "stf": 0.03, "theme": "破增发价股", "open": 0, "fst": "141202"}]}], "gaps": [], "yestPerf": [{"name": "骏成科技", "pct": 20.01888656616211, "lb": 1, "again": 1}, {"name": "天山生物", "pct": 12.189440727233887, "lb": 2, "again": 0}, {"name": "日丰股份", "pct": 10.03752326965332, "lb": 1, "again": 1}, {"name": "红四方", "pct": 10.015174865722656, "lb": 2, "again": 1}, {"name": "京粮控股", "pct": 10.014727592468262, "lb": 2, "again": 1}, {"name": "深华发Ａ", "pct": 10.00800609588623, "lb": 1, "again": 1}, {"name": "学大教育", "pct": 9.98874568939209, "lb": 1, "again": 1}, {"name": "金健米业", "pct": 9.98593521118164, "lb": 2, "again": 1}, {"name": "万向德农", "pct": 9.950860023498535, "lb": 1, "again": 1}, {"name": "麒麟信安", "pct": 8.433390617370605, "lb": 1, "again": 0}, {"name": "艾艾精工", "pct": 6.2011871337890625, "lb": 2, "again": 0}, {"name": "农发种业", "pct": 5.1622419357299805, "lb": 2, "again": 0}, {"name": "红星发展", "pct": 4.315982341766357, "lb": 1, "again": 0}, {"name": "华绿生物", "pct": 4.016620635986328, "lb": 1, "again": 0}, {"name": "天富龙", "pct": 3.924221992492676, "lb": 1, "again": 0}, {"name": "盈新发展", "pct": 3.81231689453125, "lb": 1, "again": 0}, {"name": "北大荒", "pct": 2.9717681407928467, "lb": 1, "again": 0}, {"name": "诚迈科技", "pct": 2.745664596557617, "lb": 1, "again": 0}, {"name": "登海种业", "pct": 1.0204081535339355, "lb": 1, "again": 0}, {"name": "中国软件", "pct": 0.6095790863037109, "lb": 1, "again": 0}, {"name": "神奇制药", "pct": 0.25773194432258606, "lb": 4, "again": 0}, {"name": "神农种业", "pct": 0.16051363945007324, "lb": 1, "again": 0}, {"name": "华峰铝业", "pct": -0.35928142070770264, "lb": 1, "again": 0}, {"name": "赤天化", "pct": -0.800000011920929, "lb": 1, "again": 0}, {"name": "中粮糖业", "pct": -0.9946949481964111, "lb": 1, "again": 0}, {"name": "丰原药业", "pct": -1.0479042530059814, "lb": 1, "again": 0}, {"name": "隆平高科", "pct": -1.301518440246582, "lb": 1, "again": 0}, {"name": "金牛化工", "pct": -1.382488489151001, "lb": 1, "again": 0}, {"name": "沪光股份", "pct": -1.9292603731155396, "lb": 1, "again": 0}, {"name": "亚盛集团", "pct": -1.9662922620773315, "lb": 1, "again": 0}, {"name": "敦煌种业", "pct": -2.002861261367798, "lb": 1, "again": 0}, {"name": "华之杰", "pct": -2.222683906555176, "lb": 1, "again": 0}, {"name": "华翔股份", "pct": -2.652200222015381, "lb": 1, "again": 0}, {"name": "深粮控股", "pct": -2.7298851013183594, "lb": 1, "again": 0}, {"name": "鼎阳科技", "pct": -2.849777936935425, "lb": 1, "again": 0}, {"name": "百合花", "pct": -3.061699628829956, "lb": 2, "again": 0}, {"name": "彩虹股份", "pct": -4.1666669845581055, "lb": 1, "again": 0}, {"name": "大北农", "pct": -4.437870025634766, "lb": 1, "again": 0}, {"name": "亚太股份", "pct": -4.696673393249512, "lb": 1, "again": 0}, {"name": "罗 牛 山", "pct": -5.016181468963623, "lb": 2, "again": 0}, {"name": "新农开发", "pct": -5.0505051612854, "lb": 1, "again": 0}, {"name": "东北制药", "pct": -5.44464635848999, "lb": 1, "again": 0}, {"name": "勤上股份", "pct": -5.454545497894287, "lb": 1, "again": 0}, {"name": "物产环能", "pct": -5.757575988769531, "lb": 1, "again": 0}, {"name": "龙版传媒", "pct": -5.762082099914551, "lb": 1, "again": 0}, {"name": "全新好", "pct": -5.98802375793457, "lb": 1, "again": 0}, {"name": "苏垦农发", "pct": -6.289978504180908, "lb": 1, "again": 0}, {"name": "博敏电子", "pct": -6.328451633453369, "lb": 2, "again": 0}, {"name": "东方中科", "pct": -6.716418266296387, "lb": 1, "again": 0}, {"name": "天邦食品", "pct": -6.800000190734863, "lb": 1, "again": 0}, {"name": "开开实业", "pct": -6.8322978019714355, "lb": 1, "again": 0}, {"name": "王力安防", "pct": -6.889763355255127, "lb": 1, "again": 0}, {"name": "播恩集团", "pct": -6.89399528503418, "lb": 1, "again": 0}, {"name": "南方路机", "pct": -6.913073539733887, "lb": 1, "again": 0}, {"name": "国投丰乐", "pct": -6.92307710647583, "lb": 1, "again": 0}, {"name": "石化机械", "pct": -7.081173896789551, "lb": 1, "again": 0}, {"name": "金字火腿", "pct": -7.118254661560059, "lb": 1, "again": 0}, {"name": "魅视科技", "pct": -7.710699081420898, "lb": 2, "again": 0}, {"name": "永安药业", "pct": -7.845658779144287, "lb": 1, "again": 0}, {"name": "哈森股份", "pct": -8.017334938049316, "lb": 2, "again": 0}, {"name": "瑞纳智能", "pct": -8.314436912536621, "lb": 1, "again": 0}, {"name": "南方精工", "pct": -8.338091850280762, "lb": 1, "again": 0}, {"name": "家家悦", "pct": -9.055500984191895, "lb": 1, "again": 0}, {"name": "三江购物", "pct": -9.77060317993164, "lb": 1, "again": 0}, {"name": "黑芝麻", "pct": -9.9827880859375, "lb": 1, "again": 0}, {"name": "旭光电子", "pct": -9.989344596862793, "lb": 3, "again": 0}, {"name": "襄阳轴承", "pct": -9.990485191345215, "lb": 1, "again": 0}, {"name": "蔚蓝生物", "pct": -9.992758750915527, "lb": 1, "again": 0}, {"name": "宿迁联盛", "pct": -9.994478225708008, "lb": 1, "again": 0}, {"name": "华亚智能", "pct": -9.996228218078613, "lb": 1, "again": 0}, {"name": "一鸣食品", "pct": -9.997410774230957, "lb": 2, "again": 0}, {"name": "浙江东日", "pct": -10.0, "lb": 1, "again": 0}, {"name": "正裕工业", "pct": -10.0, "lb": 3, "again": 0}, {"name": "爱丽家居", "pct": -10.0, "lb": 2, "again": 0}, {"name": "航天电器", "pct": -10.002790451049805, "lb": 1, "again": 0}, {"name": "桂发祥", "pct": -10.024450302124023, "lb": 3, "again": 0}, {"name": "富煌钢构", "pct": -10.067113876342773, "lb": 1, "again": 0}, {"name": "中石科技", "pct": -10.731958389282227, "lb": 3, "again": 0}], "lhb": [], "flowIn": [{"name": "煤化工概念", "v": 2.99}, {"name": "净水概念", "v": 1.73}, {"name": "宠物经济", "v": 1.6}, {"name": "租售同权", "v": 1.0}, {"name": "啤酒概念", "v": 0.26}, {"name": "代糖概念", "v": -0.03}, {"name": "B股", "v": -0.12}, {"name": "托育服务", "v": -0.15}], "flowOut": [{"name": "融资融券", "v": -1819.45}, {"name": "MSCI中国", "v": -1099.5}, {"name": "深股通", "v": -1077.45}, {"name": "富时罗素", "v": -1065.84}, {"name": "大盘股", "v": -841.04}, {"name": "深成500", "v": -781.3}, {"name": "沪股通", "v": -769.89}, {"name": "2026中报预增", "v": -758.42}], "watch": [{"code": "000505", "name": "京粮控股", "tag": "空间板(3板)", "note": "能否晋级决定市场情绪高度;若断板,关注高位梯队的补跌传导"}, {"code": "000526", "name": "学大教育", "tag": "主线[破增发价股]龙头(2板)", "note": "题材处于活跃;龙头强弱先于题材整体"}, {"code": "000736", "name": "中交发展", "tag": "主线[破增发价股]低位强封单(1板)", "note": "封单/流通市值0.7%,题材若延续则低位容错率更高"}, {"code": "000736", "name": "中交发展", "tag": "主线[央国企改革]低位强封单(1板)", "note": "封单/流通市值0.7%,题材若延续则低位容错率更高"}, {"code": "300911", "name": "亿田智能", "tag": "主线[转债标的]龙头(1板)", "note": "题材处于发酵期;龙头强弱先于题材整体"}, {"code": "000723", "name": "美锦能源", "tag": "主线[转债标的]低位强封单(1板)", "note": "封单/流通市值0.3%,题材若延续则低位容错率更高"}], "ztRows": [{"code": "000505", "name": "京粮控股", "lb": 3, "theme": "央国企改革", "seal": 0.6, "stf": 1.27, "fst": "093133", "open": 0, "turn": 10.7, "amt": 4.98, "stat": "3/3", "mv": 47.24}, {"code": "600127", "name": "金健米业", "lb": 3, "theme": "央国企改革", "seal": 0.27, "stf": 0.53, "fst": "092502", "open": 0, "turn": 4.6, "amt": 2.29, "stat": "3/3", "mv": 50.19}, {"code": "603395", "name": "红四方", "lb": 3, "theme": "农业种植", "seal": 0.07, "stf": 0.38, "fst": "092502", "open": 1, "turn": 18.1, "amt": 3.41, "stat": "3/3", "mv": 18.85}, {"code": "002953", "name": "日丰股份", "lb": 2, "theme": "机器人概念", "seal": 0.96, "stf": 2.92, "fst": "092500", "open": 1, "turn": 8.3, "amt": 2.75, "stat": "2/2", "mv": 33.0}, {"code": "000526", "name": "学大教育", "lb": 2, "theme": "半导体概念", "seal": 0.94, "stf": 1.98, "fst": "093324", "open": 1, "turn": 7.7, "amt": 3.59, "stat": "2/2", "mv": 47.48}, {"code": "000020", "name": "深华发Ａ", "lb": 2, "theme": "深圳特区", "seal": 0.23, "stf": 0.93, "fst": "093000", "open": 1, "turn": 10.6, "amt": 2.61, "stat": "2/2", "mv": 24.89}, {"code": "600371", "name": "万向德农", "lb": 2, "theme": "乡村振兴", "seal": 0.0, "stf": 0.02, "fst": "093118", "open": 5, "turn": 18.2, "amt": 4.68, "stat": "2/2", "mv": 26.19}, {"code": "002900", "name": "哈三联", "lb": 1, "theme": "趋势股", "seal": 1.48, "stf": 5.88, "fst": "093127", "open": 1, "turn": 12.9, "amt": 3.21, "stat": "1/1", "mv": 25.18}, {"code": "300911", "name": "亿田智能", "lb": 1, "theme": "转债标的", "seal": 1.45, "stf": 3.17, "fst": "130754", "open": 0, "turn": 19.4, "amt": 8.2, "stat": "1/1", "mv": 45.68}, {"code": "002543", "name": "万和电气", "lb": 1, "theme": "电商概念", "seal": 1.22, "stf": 2.43, "fst": "135157", "open": 0, "turn": 5.3, "amt": 2.55, "stat": "1/1", "mv": 50.08}, {"code": "002333", "name": "罗普斯金", "lb": 1, "theme": "光伏概念", "seal": 0.86, "stf": 2.04, "fst": "092500", "open": 0, "turn": 2.1, "amt": 0.89, "stat": "1/1", "mv": 42.26}, {"code": "002412", "name": "汉森制药", "lb": 1, "theme": "参股银行", "seal": 0.86, "stf": 2.05, "fst": "093342", "open": 1, "turn": 6.4, "amt": 2.62, "stat": "1/1", "mv": 41.92}, {"code": "300069", "name": "金利华电", "lb": 1, "theme": "电池技术", "seal": 0.78, "stf": 1.92, "fst": "095927", "open": 1, "turn": 16.5, "amt": 6.15, "stat": "1/1", "mv": 40.55}, {"code": "001277", "name": "速达股份", "lb": 1, "theme": "专用设备", "seal": 0.53, "stf": 3.52, "fst": "094227", "open": 0, "turn": 5.5, "amt": 0.83, "stat": "1/1", "mv": 15.02}, {"code": "000723", "name": "美锦能源", "lb": 1, "theme": "新能源车", "seal": 0.48, "stf": 0.28, "fst": "093536", "open": 2, "turn": 4.2, "amt": 7.14, "stat": "1/1", "mv": 170.97}, {"code": "000059", "name": "华锦股份", "lb": 1, "theme": "央国企改革", "seal": 0.46, "stf": 0.57, "fst": "130551", "open": 1, "turn": 5.1, "amt": 4.03, "stat": "1/1", "mv": 81.09}, {"code": "001400", "name": "江顺科技", "lb": 1, "theme": "风能", "seal": 0.4, "stf": 1.01, "fst": "095445", "open": 2, "turn": 13.5, "amt": 5.17, "stat": "1/1", "mv": 39.73}, {"code": "000560", "name": "我爱我家", "lb": 1, "theme": "西部大开发", "seal": 0.37, "stf": 0.66, "fst": "093327", "open": 4, "turn": 18.3, "amt": 10.12, "stat": "1/1", "mv": 55.65}, {"code": "001301", "name": "尚太科技", "lb": 1, "theme": "电池技术", "seal": 0.28, "stf": 0.18, "fst": "093121", "open": 10, "turn": 6.2, "amt": 10.07, "stat": "1/1", "mv": 162.11}, {"code": "000736", "name": "中交发展", "lb": 1, "theme": "央国企改革", "seal": 0.26, "stf": 0.7, "fst": "093348", "open": 0, "turn": 4.4, "amt": 1.6, "stat": "1/1", "mv": 36.61}, {"code": "603290", "name": "斯达半导", "lb": 1, "theme": "破增发价股", "seal": 0.2, "stf": 0.08, "fst": "095313", "open": 2, "turn": 8.8, "amt": 20.56, "stat": "1/1", "mv": 240.22}, {"code": "301130", "name": "西点药业", "lb": 1, "theme": "病原体防治", "seal": 0.2, "stf": 1.01, "fst": "093542", "open": 1, "turn": 28.2, "amt": 5.32, "stat": "4/2", "mv": 19.7}, {"code": "002040", "name": "南 京 港", "lb": 1, "theme": "央国企改革", "seal": 0.16, "stf": 0.36, "fst": "112209", "open": 3, "turn": 6.5, "amt": 2.79, "stat": "1/1", "mv": 44.04}, {"code": "601011", "name": "宝泰隆", "lb": 1, "theme": "破增发价股", "seal": 0.12, "stf": 0.21, "fst": "093002", "open": 0, "turn": 3.8, "amt": 2.21, "stat": "1/1", "mv": 58.24}, {"code": "301211", "name": "亨迪药业", "lb": 1, "theme": "流感", "seal": 0.12, "stf": 0.2, "fst": "093436", "open": 4, "turn": 13.7, "amt": 8.04, "stat": "1/1", "mv": 60.72}, {"code": "001338", "name": "永顺泰", "lb": 1, "theme": "央国企改革", "seal": 0.11, "stf": 0.22, "fst": "094515", "open": 7, "turn": 6.1, "amt": 2.89, "stat": "1/1", "mv": 48.32}, {"code": "600403", "name": "大有能源", "lb": 1, "theme": "央国企改革", "seal": 0.08, "stf": 0.05, "fst": "094829", "open": 0, "turn": 5.2, "amt": 8.26, "stat": "1/1", "mv": 163.05}, {"code": "600783", "name": "鲁信创投", "lb": 1, "theme": "央国企改革", "seal": 0.05, "stf": 0.04, "fst": "092502", "open": 1, "turn": 6.0, "amt": 8.97, "stat": "1/1", "mv": 150.29}, {"code": "603102", "name": "百合股份", "lb": 1, "theme": "养老概念", "seal": 0.05, "stf": 0.17, "fst": "093233", "open": 0, "turn": 11.5, "amt": 3.33, "stat": "6/3", "mv": 29.29}, {"code": "600610", "name": "中毅达", "lb": 1, "theme": "西部大开发", "seal": 0.03, "stf": 0.06, "fst": "102435", "open": 2, "turn": 6.7, "amt": 3.61, "stat": "1/1", "mv": 55.28}, {"code": "603366", "name": "日出东方", "lb": 1, "theme": "光伏概念", "seal": 0.03, "stf": 0.05, "fst": "110113", "open": 0, "turn": 4.9, "amt": 2.97, "stat": "1/1", "mv": 62.04}, {"code": "601015", "name": "陕西黑猫", "lb": 1, "theme": "西部大开发", "seal": 0.03, "stf": 0.04, "fst": "101531", "open": 1, "turn": 7.7, "amt": 5.66, "stat": "1/1", "mv": 75.78}, {"code": "603506", "name": "南都物业", "lb": 1, "theme": "机器人概念", "seal": 0.02, "stf": 0.1, "fst": "093014", "open": 1, "turn": 4.0, "amt": 0.89, "stat": "1/1", "mv": 22.31}, {"code": "603801", "name": "志邦家居", "lb": 1, "theme": "转债标的", "seal": 0.02, "stf": 0.07, "fst": "093238", "open": 1, "turn": 3.1, "amt": 0.88, "stat": "1/1", "mv": 28.54}, {"code": "603848", "name": "好太太", "lb": 1, "theme": "电商概念", "seal": 0.02, "stf": 0.03, "fst": "093616", "open": 2, "turn": 2.2, "amt": 1.29, "stat": "1/1", "mv": 58.99}, {"code": "603113", "name": "金能科技", "lb": 1, "theme": "破增发价股", "seal": 0.01, "stf": 0.03, "fst": "141202", "open": 0, "turn": 4.5, "amt": 1.87, "stat": "1/1", "mv": 43.7}], "zbRows": [{"code": "000703", "name": "恒逸石化", "pct": 9.215798377990723, "open": 4, "amp": 10.017171859741211}, {"code": "601609", "name": "金田股份", "pct": 8.36820125579834, "open": 5, "amp": 11.046025276184082}, {"code": "300155", "name": "安居宝", "pct": 8.15850830078125, "open": 1, "amp": 21.678321838378906}, {"code": "603207", "name": "小方制药", "pct": 7.60407829284668, "open": 2, "amp": 10.662701606750488}, {"code": "000523", "name": "红棉股份", "pct": 5.592105388641357, "open": 2, "amp": 8.552631378173828}, {"code": "600313", "name": "农发种业", "pct": 5.1622419357299805, "open": 2, "amp": 6.489675521850586}, {"code": "000025", "name": "特  力Ａ", "pct": 4.045092582702637, "open": 2, "amp": 10.941644668579102}, {"code": "002678", "name": "珠江钢琴", "pct": 1.727861762046814, "open": 1, "amp": 11.015118598937988}, {"code": "003042", "name": "中农联合", "pct": 0.7183908224105835, "open": 1, "amp": 13.002874374389648}, {"code": "600613", "name": "神奇制药", "pct": 0.25773194432258606, "open": 3, "amp": 14.948452949523926}, {"code": "000153", "name": "丰原药业", "pct": -1.0479042530059814, "open": 1, "amp": 13.92215633392334}, {"code": "603958", "name": "哈森股份", "pct": -8.017334938049316, "open": 1, "amp": 20.043336868286133}], "dtRows": [{"code": "001260", "name": "坤泰股份", "consec": 2, "seal": 0.09}, {"code": "000547", "name": "航天发展", "consec": 1, "seal": 0.13}, {"code": "000636", "name": "风华高科", "consec": 1, "seal": 0.48}, {"code": "000678", "name": "襄阳轴承", "consec": 1, "seal": 0.54}, {"code": "000700", "name": "模塑科技", "consec": 1, "seal": 0.14}, {"code": "000716", "name": "黑芝麻", "consec": 1, "seal": 0.4}, {"code": "000802", "name": "北京文化", "consec": 1, "seal": 1.71}, {"code": "000815", "name": "美利云", "consec": 1, "seal": 0.19}, {"code": "000837", "name": "秦川机床", "consec": 1, "seal": 0.14}, {"code": "000936", "name": "华西股份", "consec": 1, "seal": 0.26}, {"code": "000938", "name": "紫光股份", "consec": 1, "seal": 2.8}, {"code": "000977", "name": "浪潮信息", "consec": 1, "seal": 0.16}, {"code": "001258", "name": "立新能源", "consec": 1, "seal": 0.66}, {"code": "001331", "name": "胜通能源", "consec": 1, "seal": 0.22}, {"code": "002008", "name": "大族激光", "consec": 1, "seal": 0.2}, {"code": "002031", "name": "巨轮智能", "consec": 1, "seal": 1.44}, {"code": "002067", "name": "景兴纸业", "consec": 1, "seal": 0.11}, {"code": "002080", "name": "中材科技", "consec": 1, "seal": 0.93}, {"code": "002081", "name": "金 螳 螂", "consec": 1, "seal": 3.32}, {"code": "002141", "name": "贤丰控股", "consec": 1, "seal": 0.5}, {"code": "002156", "name": "通富微电", "consec": 1, "seal": 1.54}, {"code": "002229", "name": "鸿博股份", "consec": 1, "seal": 0.31}, {"code": "002248", "name": "华东数控", "consec": 1, "seal": 2.04}, {"code": "002272", "name": "川润股份", "consec": 1, "seal": 0.05}, {"code": "002281", "name": "光迅科技", "consec": 1, "seal": 0.66}, {"code": "002303", "name": "美盈森", "consec": 1, "seal": 0.03}, {"code": "002329", "name": "皇氏集团", "consec": 1, "seal": 0.28}, {"code": "002342", "name": "巨力索具", "consec": 1, "seal": 0.02}, {"code": "002396", "name": "星网锐捷", "consec": 1, "seal": 0.23}, {"code": "002402", "name": "和而泰", "consec": 1, "seal": 0.07}, {"code": "002409", "name": "雅克科技", "consec": 1, "seal": 2.12}, {"code": "002436", "name": "兴森科技", "consec": 1, "seal": 1.25}, {"code": "002484", "name": "江海股份", "consec": 1, "seal": 0.88}, {"code": "002491", "name": "通鼎互联", "consec": 1, "seal": 1.12}, {"code": "002520", "name": "日发精机", "consec": 1, "seal": 0.23}, {"code": "002565", "name": "顺灏股份", "consec": 1, "seal": 0.12}, {"code": "002577", "name": "雷柏科技", "consec": 1, "seal": 0.02}, {"code": "002582", "name": "好想你", "consec": 1, "seal": 0.16}, {"code": "002636", "name": "金安国纪", "consec": 1, "seal": 1.92}, {"code": "002703", "name": "浙江世宝", "consec": 1, "seal": 0.2}, {"code": "002724", "name": "海洋王", "consec": 1, "seal": 0.14}, {"code": "002743", "name": "富煌钢构", "consec": 1, "seal": 0.34}, {"code": "002747", "name": "埃斯顿", "consec": 1, "seal": 3.47}, {"code": "002792", "name": "通宇通讯", "consec": 1, "seal": 0.29}, {"code": "002820", "name": "桂发祥", "consec": 1, "seal": 0.71}, {"code": "002851", "name": "麦格米特", "consec": 1, "seal": 1.35}, {"code": "002859", "name": "洁美科技", "consec": 1, "seal": 1.31}, {"code": "002896", "name": "中大力德", "consec": 1, "seal": 2.27}, {"code": "002897", "name": "意华股份", "consec": 1, "seal": 0.06}, {"code": "002931", "name": "锋龙股份", "consec": 1, "seal": 0.53}, {"code": "002937", "name": "兴瑞科技", "consec": 1, "seal": 0.08}, {"code": "002957", "name": "科瑞技术", "consec": 1, "seal": 0.46}, {"code": "002965", "name": "祥鑫科技", "consec": 1, "seal": 0.11}, {"code": "002975", "name": "博杰股份", "consec": 1, "seal": 0.08}, {"code": "002979", "name": "雷赛智能", "consec": 1, "seal": 0.37}, {"code": "002980", "name": "华盛昌", "consec": 1, "seal": 0.4}, {"code": "003021", "name": "兆威机电", "consec": 1, "seal": 0.02}, {"code": "003031", "name": "中瓷电子", "consec": 1, "seal": 0.29}, {"code": "003043", "name": "华亚智能", "consec": 1, "seal": 0.27}, {"code": "600105", "name": "永鼎股份", "consec": 1, "seal": 0.02}, {"code": "600183", "name": "生益科技", "consec": 1, "seal": 0.02}, {"code": "600186", "name": "莲花控股", "consec": 1, "seal": 0.05}, {"code": "600246", "name": "万通发展", "consec": 1, "seal": 0.01}, {"code": "600353", "name": "旭光电子", "consec": 1, "seal": 0.02}, {"code": "600376", "name": "首开股份", "consec": 1, "seal": 0.02}, {"code": "600397", "name": "江钨装备", "consec": 1, "seal": 0.02}, {"code": "600580", "name": "卧龙电驱", "consec": 1, "seal": 0.05}, {"code": "600683", "name": "京投发展", "consec": 1, "seal": 0.0}, {"code": "600829", "name": "人民同泰", "consec": 1, "seal": 0.02}, {"code": "601869", "name": "长飞光纤", "consec": 1, "seal": 0.06}, {"code": "603009", "name": "北特科技", "consec": 1, "seal": 0.0}, {"code": "603031", "name": "安孚科技", "consec": 1, "seal": 0.0}, {"code": "603052", "name": "可川科技", "consec": 1, "seal": 0.0}, {"code": "603061", "name": "金海通", "consec": 1, "seal": 0.0}, {"code": "603065", "name": "宿迁联盛", "consec": 1, "seal": 0.01}, {"code": "603079", "name": "圣达生物", "consec": 1, "seal": 0.02}, {"code": "603083", "name": "剑桥科技", "consec": 1, "seal": 0.0}, {"code": "603089", "name": "正裕工业", "consec": 1, "seal": 0.01}, {"code": "603115", "name": "海星股份", "consec": 1, "seal": 0.0}, {"code": "603118", "name": "共进股份", "consec": 1, "seal": 0.01}, {"code": "603119", "name": "浙江荣泰", "consec": 1, "seal": 0.0}, {"code": "603124", "name": "江南新材", "consec": 1, "seal": 0.0}, {"code": "603137", "name": "恒尚节能", "consec": 1, "seal": 0.03}, {"code": "603179", "name": "新泉股份", "consec": 1, "seal": 0.0}, {"code": "603211", "name": "晋拓股份", "consec": 1, "seal": 0.0}, {"code": "603221", "name": "爱丽家居", "consec": 1, "seal": 0.08}, {"code": "603228", "name": "景旺电子", "consec": 1, "seal": 0.04}, {"code": "603256", "name": "宏和科技", "consec": 1, "seal": 0.03}, {"code": "603285", "name": "键邦股份", "consec": 1, "seal": 0.0}, {"code": "603319", "name": "美湖股份", "consec": 1, "seal": 0.0}, {"code": "603330", "name": "天洋新材", "consec": 1, "seal": 0.06}, {"code": "603601", "name": "再升科技", "consec": 1, "seal": 0.0}, {"code": "603608", "name": "天创时尚", "consec": 1, "seal": 0.0}, {"code": "603618", "name": "杭电股份", "consec": 1, "seal": 0.01}, {"code": "603662", "name": "柯力传感", "consec": 1, "seal": 0.0}, {"code": "603663", "name": "三祥新材", "consec": 1, "seal": 0.01}, {"code": "603667", "name": "五洲新春", "consec": 1, "seal": 0.01}, {"code": "603678", "name": "火炬电子", "consec": 1, "seal": 0.02}, {"code": "603728", "name": "鸣志电器", "consec": 1, "seal": 0.0}, {"code": "603738", "name": "泰晶科技", "consec": 1, "seal": 0.02}, {"code": "603739", "name": "蔚蓝生物", "consec": 1, "seal": 0.0}, {"code": "603758", "name": "秦安股份", "consec": 1, "seal": 0.01}, {"code": "603767", "name": "中马传动", "consec": 1, "seal": 0.0}, {"code": "603790", "name": "雅运股份", "consec": 1, "seal": 0.0}, {"code": "603880", "name": "南卫股份", "consec": 1, "seal": 0.0}, {"code": "603887", "name": "城地香江", "consec": 1, "seal": 0.01}, {"code": "603897", "name": "长城科技", "consec": 1, "seal": 0.0}, {"code": "603989", "name": "艾华集团", "consec": 1, "seal": 0.01}, {"code": "605179", "name": "一鸣食品", "consec": 1, "seal": 0.05}, {"code": "605189", "name": "富春染织", "consec": 1, "seal": 0.0}, {"code": "605288", "name": "凯迪股份", "consec": 1, "seal": 0.0}, {"code": "605376", "name": "博迁新材", "consec": 1, "seal": 0.02}, {"code": "605589", "name": "圣泉集团", "consec": 1, "seal": 0.0}], "missing": {"lhb_detail": {"status": "failed", "message": "'NoneType' object is not subscriptable"}}, "newStocks": []};
+
+// ---------- 工具 ----------
+const fmt = (v, suf="") => v==null ? "—" : v + suf;
+const pct = v => v==null ? "—" : (v*100).toFixed(1)+"%";
+const delta = (cur, prev, inv) => {
+  if (cur==null || prev==null) return "";
+  const d = cur - prev; if (!d) return "";
+  const up = d > 0;
+  return `<span class="delta ${up?'up':'dn'}">${up?'▲':'▼'}${Math.abs(d).toFixed(1).replace(/\.0$/,'')}</span>`;
+};
+
+// ---------- 标题与周期 ----------
+document.getElementById("phase").textContent = D.senti.phase || "";
+document.getElementById("reason").innerHTML = (D.senti.reason||"").split(";").map(r=>"· "+r).join("<br>");
+
+// ---------- 情绪卡片 ----------
+const cards = [
+  ["涨停", fmt(D.senti.zt,"家"), delta(D.senti.zt, D.prev.zt)],
+  ["跌停", fmt(D.senti.dt,"家"), delta(D.senti.dt, D.prev.dt)],
+  ["炸板率", pct(D.senti.zbRate), delta(D.senti.zbRate==null?null:D.senti.zbRate*100, D.prev.zbRate==null?null:D.prev.zbRate*100)],
+  ["连板高度", fmt(D.senti.maxLb,"板"), delta(D.senti.maxLb, D.prev.maxLb)],
+  ["两市成交", D.senti.amount==null?"缺失":(D.senti.amount/10000>=1?(D.senti.amount/10000).toFixed(2)+"万亿":D.senti.amount+"亿"), ""],
+  ["昨涨停溢价", D.senti.prem==null?"—":D.senti.prem.toFixed(2)+"%", delta(D.senti.prem, D.prev.prem)],
+  ["总晋级率", pct(D.senti.promo), ""],
+  ["涨/跌家数", fmt(D.senti.up)+"/"+fmt(D.senti.down), ""],
+];
+document.getElementById("cards").innerHTML = cards.map(c=>
+  `<div class="card"><div class="t">${c[0]}</div><div class="v">${c[1]}${c[2]}</div></div>`).join("");
+
+// ---------- 近10日情绪趋势 ----------
+function chart(id, opt){ try{ echarts.init(document.getElementById(id)).setOption(opt);}catch(e){
+  document.getElementById(id).innerHTML = '<div class="note" style="padding:20px">图表加载失败(需联网加载 ECharts CDN)</div>';}}
+chart("trend", {
+  tooltip:{trigger:"axis"}, legend:{data:["涨停","跌停","炸板率%","连板高度"]},
+  grid:{left:40,right:40,top:36,bottom:24},
+  xAxis:{type:"category",data:D.hist.map(h=>h.d)},
+  yAxis:[{type:"value",name:"家数"},{type:"value",name:"%/板",max:v=>Math.max(40,v.max)}],
+  series:[
+    {name:"涨停",type:"bar",data:D.hist.map(h=>h.zt),itemStyle:{color:"#d93025"}},
+    {name:"跌停",type:"bar",data:D.hist.map(h=>h.dt),itemStyle:{color:"#1e8e3e"}},
+    {name:"炸板率%",type:"line",yAxisIndex:1,data:D.hist.map(h=>h.zbRate),itemStyle:{color:"#f9ab00"}},
+    {name:"连板高度",type:"line",yAxisIndex:1,data:D.hist.map(h=>h.maxLb),itemStyle:{color:"#4285f4"}},
+  ]});
+
+// ---------- 题材树状图 ----------
+chart("themeChart", {
+  tooltip:{formatter:p=>`${p.name}<br>涨停${p.value}家`},
+  series:[{type:"treemap",roam:false,nodeClick:false,breadcrumb:{show:false},
+    label:{formatter:p=>`${p.name}\n${p.value}家`},
+    data:D.themes.slice(0,14).map(t=>({name:t.theme,value:t.zt}))}]});
+document.getElementById("themeTable").innerHTML =
+  "<tr><th>题材</th><th>涨停</th><th>炸板</th><th>总封单(亿)</th><th>最高板</th><th>连续活跃</th><th>阶段</th><th>龙头</th></tr>" +
+  D.themes.slice(0,12).map(t=>`<tr><td>${t.theme}</td><td>${t.zt}</td><td>${t.zb}</td><td>${t.seal??"—"}</td><td>${t.maxlb}</td><td>${t.streak}天</td><td>${t.stage}</td><td>${t.leader}</td></tr>`).join("");
+
+// ---------- 连板天梯 ----------
+if (D.gaps.length) document.getElementById("gapWarn").innerHTML =
+  `<div class="warn">⚠️ 梯队断层:${D.gaps.map(g=>g+"板").join("、")} 空缺——断层之上的票缺少后排对标,接力风险大</div>`;
+document.getElementById("ladder").innerHTML = D.ladder.map(t=>{
+  const chips = t.lb>=2
+    ? t.stocks.map(s=>`<span class="stock-chip"><b>${s.name}</b> <span class="chip-sub">${s.theme} 封${s.seal??"—"}亿/占流通${s.stf}% ${s.open?("开"+s.open+"次"):"未开板"}</span></span>`).join("")
+    : `<span class="note">${t.stocks.length}家(明细见附表)</span>`;
+  return `<div class="ladder-tier"><div class="lb-badge ${t.lb<2?'low':''}">${t.lb}板<br><span style="font-size:11px">${t.stocks.length}家</span></div><div>${chips}</div></div>`;
+}).join("");
+
+// ---------- 晋级与溢价 ----------
+const pd = D.senti.promoDetail||{};
+document.getElementById("promoCards").innerHTML =
+  Object.entries(pd).map(([k,v])=>`<div class="card"><div class="t">${k}</div><div class="v" style="font-size:18px">${v}</div></div>`).join("")
+  || '<div class="note">无晋级数据</div>';
+const perf = D.yestPerf;
+chart("premChart", {
+  tooltip:{trigger:"axis"}, grid:{left:40,right:20,top:30,bottom:60},
+  xAxis:{type:"category",data:perf.map(p=>p.name),axisLabel:{rotate:60,fontSize:10}},
+  yAxis:{type:"value",name:"今日涨跌%"},
+  series:[{type:"bar",data:perf.map(p=>({value:p.pct,itemStyle:{color:p.pct>=0?"#d93025":"#1e8e3e"}}))}]});
+
+// ---------- 龙虎榜 ----------
+document.getElementById("lhbTable").innerHTML = D.lhb.length
+  ? "<tr><th>股票</th><th>连板</th><th>净买(亿)</th><th>知名买方</th><th>解读</th></tr>" +
+    D.lhb.map(f=>`<tr><td>${f.name}</td><td>${f.lb||"—"}</td><td>${f.netBuy??"—"}</td><td>${f.buyers.map(b=>`<span class="tag">${b}</span>`).join("")||"—"}</td><td class="note">${f.interpret}</td></tr>`).join("")
+  : "<tr><td class='note'>龙虎榜数据缺失(约17:00-18:30公布,可运行补充任务)</td></tr>";
+if (D.flowIn.length) chart("flowChart", {
+  title:{text:"概念主力资金净流入/流出 TOP(亿)",left:"center",textStyle:{fontSize:13}},
+  tooltip:{}, grid:{left:120,right:40,top:40,bottom:20},
+  xAxis:{type:"value"}, yAxis:{type:"category",
+    data:[...D.flowOut.slice().reverse(), ...D.flowIn].map(x=>x.name)},
+  series:[{type:"bar",data:[...D.flowOut.slice().reverse(),...D.flowIn].map(x=>({value:x.v,itemStyle:{color:x.v>=0?"#d93025":"#1e8e3e"}}))}]});
+else document.getElementById("flowChart").innerHTML='<div class="note" style="padding:16px">板块资金流数据缺失</div>';
+
+// ---------- 明日关注 ----------
+document.getElementById("watchTable").innerHTML =
+  "<tr><th>标的</th><th>类型</th><th>观察点</th></tr>" +
+  D.watch.map(w=>`<tr><td><b>${w.name}</b> ${w.code}</td><td><span class="tag">${w.tag}</span></td><td class="note">${w.note}</td></tr>`).join("");
+
+// ---------- 附表(可排序) ----------
+if (D.newStocks.length) document.getElementById("newStocks").innerHTML =
+  "无涨跌幅限制新股(不计入统计):" + D.newStocks.map(n=>`${n.name} ${n.pct==null?"—":(n.pct>0?'+':'')+n.pct+'%'}`).join("、");
+
+function sortable(id, cols, rows){
+  const el = document.getElementById(id);
+  let sortKey = null, asc = false;
+  function render(){
+    const data = sortKey ? rows.slice().sort((a,b)=>{
+      const x=a[sortKey], y=b[sortKey];
+      if(x==null) return 1; if(y==null) return -1;
+      return (typeof x==="number" ? x-y : String(x).localeCompare(String(y))) * (asc?1:-1);
+    }) : rows;
+    el.innerHTML = "<tr>"+cols.map(c=>`<th data-k="${c[0]}">${c[1]}${sortKey===c[0]?(asc?" ▲":" ▼"):""}</th>`).join("")+"</tr>"
+      + data.map(r=>"<tr>"+cols.map(c=>`<td>${r[c[0]]??"—"}</td>`).join("")+"</tr>").join("");
+    el.querySelectorAll("th").forEach(th=>th.onclick=()=>{
+      const k = th.dataset.k;
+      if (sortKey===k) asc=!asc; else { sortKey=k; asc=false; }
+      render();
+    });
+  }
+  render();
+}
+sortable("ztTable", [["code","代码"],["name","名称"],["lb","连板"],["theme","题材"],["seal","封单(亿)"],["stf","封单/流通%"],["fst","首封"],["open","开板"],["turn","换手%"],["amt","成交(亿)"],["mv","流通(亿)"],["stat","涨停统计"]], D.ztRows);
+sortable("zbTable", [["code","代码"],["name","名称"],["pct","收盘涨幅%"],["open","炸板次数"],["amp","振幅%"]], D.zbRows);
+sortable("dtTable", [["code","代码"],["name","名称"],["consec","连续跌停"],["seal","封单(亿)"]], D.dtRows);
+
+// ---------- 数据缺失 ----------
+const miss = Object.entries(D.missing);
+if (miss.length) document.getElementById("missing").innerHTML =
+  '<div class="missing">数据完整性提示:' + miss.map(([k,v])=>`${k}(${v.status})`).join(";") + "</div>";
+</script>
+</body>
+</html>
